@@ -1,0 +1,39 @@
+# Render blueprint for the TechDea LMS.
+# Two services: an Express API (web) and the Vite React client (static).
+# Import via Render → Blueprints, or use it as the reference for manual setup.
+
+services:
+  # ── API ────────────────────────────────────────────────────────────────
+  - type: web
+    name: server-lms-xj9d
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI          # MongoDB Atlas connection string (…/techdea_lms?…)
+        sync: false
+      - key: JWT_SECRET         # long random string
+        sync: false
+      - key: JWT_EXPIRES
+        value: 7d
+      - key: CLIENT_ORIGIN      # exact origin of the client, no trailing slash
+        value: https://lms-client-szuv.onrender.com
+
+  # ── Client ─────────────────────────────────────────────────────────────
+  - type: web
+    name: lms-client-szuv
+    runtime: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    # SPA fallback: serve index.html for client-side routes (/login, etc.)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL       # MUST include the /api path
+        value: https://server-lms-xj9d.onrender.com/api

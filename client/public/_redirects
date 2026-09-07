@@ -1,0 +1,4 @@
+# SPA fallback for Render static hosting.
+# Real files (assets, etc.) are served first; any other path returns index.html
+# with a 200 so React Router can handle it (/login, /teach/students, refresh…).
+/*    /index.html   200
