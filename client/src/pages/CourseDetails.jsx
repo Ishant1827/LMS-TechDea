@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { BookOpen, Clock, Award, Play } from "lucide-react";
+import { BookOpen, Clock, Award, Play, ArrowLeft } from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader, CourseThumb } from "../components/Bits";
@@ -98,6 +98,7 @@ export default function CourseDetails() {
       <Layout>
         <h3>Course not found</h3>
         <Link className="btn btn-secondary" to="/courses" style={{ width: "fit-content" }}>
+          <ArrowLeft />
           Back to courses
         </Link>
       </Layout>
@@ -116,6 +117,10 @@ export default function CourseDetails() {
 
   return (
     <Layout>
+      <Link className="back" to="/courses" style={{ marginBottom: 14 }}>
+        <ArrowLeft />
+        Browse Courses
+      </Link>
       <div className="split">
         <div>
           <CourseThumb src={course.thumbnailUrl} height={200} style={{ marginBottom: 14 }} />

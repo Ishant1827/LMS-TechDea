@@ -7,6 +7,7 @@ import Modal from "../components/Modal";
 import CoursePreview from "../components/CoursePreview";
 import { CenterLoader, CourseThumb } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 import { LESSON_TYPES, typeMeta, fmtDuration } from "../lib/lessonTypes";
 import { fileToResizedDataUrl } from "../lib/image";
 
@@ -28,6 +29,7 @@ export default function CourseEditor() {
   const isNew = !id;
   const nav = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [form, setForm] = useState(emptyForm);
   const [course, setCourse] = useState(null);
@@ -80,7 +82,6 @@ export default function CourseEditor() {
 
   const payload = () => ({
     title: form.title.trim(),
-    teacherName: form.teacherName.trim(),
     description: form.description,
     hours: Number(form.hours) || 0,
     thumbnailUrl: form.thumbnailUrl,
@@ -148,8 +149,12 @@ export default function CourseEditor() {
         <input className="input" value={form.title} onChange={set("title")} />
       </div>
       <div className="field">
-        <label>Teacher name (shown to students)</label>
-        <input className="input" value={form.teacherName} onChange={set("teacherName")} />
+        <label>Teacher shown to students</label>
+        <input className="input" value={form.teacherName || user.name} disabled />
+        <div className="muted-sm" style={{ marginTop: 4 }}>
+          Your account name. Change it in <Link to="/profile">Profile</Link> and it updates on all
+          your courses.
+        </div>
       </div>
       <div className="field">
         <label>Description</label>

@@ -13,6 +13,8 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/courses", require("./routes/courses"));
 app.use("/api/enrollments", require("./routes/enrollments"));
 app.use("/api/doubts", require("./routes/doubts"));
+app.use("/api/assessments", require("./routes/assessments"));
+app.use("/api/submissions", require("./routes/submissions"));
 app.use("/api/students", require("./routes/students"));
 app.use("/api/users", require("./routes/users"));
 

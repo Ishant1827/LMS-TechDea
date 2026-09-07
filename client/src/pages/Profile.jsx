@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
+import { roleHome } from "../lib/roles";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { initials, cap } from "../lib/format";
@@ -8,6 +11,8 @@ import { initials, cap } from "../lib/format";
 export default function Profile() {
   const { user, patchUser } = useAuth();
   const toast = useToast();
+  const nav = useNavigate();
+  const goBack = () => (window.history.length > 1 ? nav(-1) : nav(roleHome(user.role)));
   const [p, setP] = useState({ name: user.name, email: user.email, phone: user.phone || "" });
   const [pw, setPw] = useState({ currentPassword: "", newPassword: "" });
   const [busy, setBusy] = useState(false);
@@ -41,6 +46,10 @@ export default function Profile() {
 
   return (
     <Layout>
+      <button type="button" className="back" onClick={goBack} style={{ marginBottom: 14 }}>
+        <ArrowLeft />
+        Back
+      </button>
       <h4 className="page-title">Profile</h4>
       <div style={{ maxWidth: 420 }}>
         <div className="row" style={{ marginBottom: 20 }}>

@@ -2,6 +2,8 @@ const Course = require("../models/Course");
 const Lesson = require("../models/Lesson");
 const Enrollment = require("../models/Enrollment");
 const Review = require("../models/Review");
+const Assessment = require("../models/Assessment");
+const Submission = require("../models/Submission");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { DIFFICULTY } = require("../utils/constants");
@@ -245,6 +247,8 @@ exports.remove = asyncHandler(async (req, res) => {
   await Promise.all([
     Lesson.deleteMany({ course: course._id }),
     Enrollment.deleteMany({ course: course._id }),
+    Assessment.deleteMany({ course: course._id }),
+    Submission.deleteMany({ course: course._id }),
     course.deleteOne(),
   ]);
   res.json({ message: "Course deleted" });
@@ -298,27 +302,6 @@ exports.performance = asyncHandler(async (req, res) => {
   const totalLessons = lessons.length;
   const completedCourse = enrolls.filter((e) => e.status === "completed").length;
 
-  const funnel = lessons.map((l) => {
-    const done = enrolls.filter((e) =>
-      (e.completedLessons || []).some((id) => String(id) === String(l._id))
-    ).length;
-    return {
-      lessonId: l._id,
-      title: l.title,
-      module: l.module,
-      completed: done,
-      pct: enrolled ? Math.round((done / enrolled) * 100) : 0,
-    };
-  });
-
-  let dropOff = null;
-  for (let i = 1; i < funnel.length; i++) {
-    const drop = funnel[i - 1].completed - funnel[i].completed;
-    if (drop > 0 && (!dropOff || drop > dropOff.drop)) {
-      dropOff = { title: funnel[i].title, after: funnel[i - 1].title, drop };
-    }
-  }
-
   const avgPercent =
     enrolled && totalLessons
       ? Math.round(
@@ -342,7 +325,7 @@ exports.performance = asyncHandler(async (req, res) => {
     avgPercent,
     active7,
     totalLessons,
-    funnel,
-    dropOff,
+    // Per-student scoring lives in the Assignments & Quizzes module (not built yet).
+    assessments: [],
   });
 });

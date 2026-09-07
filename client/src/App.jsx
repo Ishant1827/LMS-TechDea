@@ -6,6 +6,7 @@ import { roleHome } from "./lib/roles";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 
 // student
 import Dashboard from "./pages/Dashboard";
@@ -15,6 +16,7 @@ import MyLearning from "./pages/MyLearning";
 import LessonPlayer from "./pages/LessonPlayer";
 import ProgressPage from "./pages/ProgressPage";
 import StudentAssignments from "./pages/StudentAssignments";
+import AssessmentDetail from "./pages/AssessmentDetail";
 import StudentDoubts from "./pages/StudentDoubts";
 
 // teacher / admin
@@ -47,6 +49,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to={home} replace /> : <Login />} />
       <Route path="/signup" element={user ? <Navigate to={home} replace /> : <Signup />} />
+      <Route path="/forgot-password" element={user ? <Navigate to={home} replace /> : <ForgotPassword />} />
 
       {/* ── student workspace ─────────────────────────────── */}
       <Route path="/" element={S(<Dashboard />, student)} />
@@ -56,6 +59,7 @@ export default function App() {
       <Route path="/my-courses" element={<Navigate to="/my-learning" replace />} />
       <Route path="/learn/:courseId/:lessonId" element={S(<LessonPlayer />, student)} />
       <Route path="/assignments" element={S(<StudentAssignments />, student)} />
+      <Route path="/assignments/:id" element={S(<AssessmentDetail />, student)} />
       <Route path="/progress" element={S(<ProgressPage />, student)} />
       <Route path="/doubts" element={S(<StudentDoubts />, student)} />
 

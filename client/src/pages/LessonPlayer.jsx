@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   GraduationCap,
@@ -38,9 +38,69 @@ export default function LessonPlayer() {
   const visited = useRef(new Set());
 
   // notes
-  const notesRef = useRef({});
+  const notesRef = useRef({}); // server-confirmed { lessonId: text }
+  const draftRef = useRef(""); // latest textarea value, for stale-closure-free saves
+  const saveTimer = useRef(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteState, setNoteState] = useState(""); // "", "Unsaved", "Saving…", "Saved"
+
+  const noteKey = (lid) => `lms:note:${courseId}:${lid}`;
+  const readLocalNote = (lid) => {
+    try {
+      return localStorage.getItem(noteKey(lid));
+    } catch {
+      return null;
+    }
+  };
+
+  // Persist one lesson's note. `silent` saves without touching the status line —
+  // used when leaving the lesson, so a slow response can't mislabel the next one.
+  const flushNote = useCallback(
+    async (lid, text, { silent = false } = {}) => {
+      if (!lid) return;
+      clearTimeout(saveTimer.current);
+      if ((notesRef.current[lid] || "") === text) return;
+      if (!silent) setNoteState("Saving…");
+      try {
+        await api.put(`/enrollments/${courseId}/notes/${lid}`, { text });
+        notesRef.current[lid] = text;
+        try {
+          localStorage.removeItem(noteKey(lid));
+        } catch {
+          /* private mode / quota — the note is on the server, ignore */
+        }
+        if (!silent && draftRef.current === text) setNoteState("Saved");
+      } catch (e) {
+        if (!silent) {
+          toast(e.message);
+          setNoteState("Unsaved");
+        }
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [courseId]
+  );
+
+  // debounced autosave while typing
+  useEffect(() => {
+    if (noteState !== "Unsaved") return;
+    const lid = lessonId;
+    const text = noteDraft;
+    saveTimer.current = setTimeout(() => flushNote(lid, text), 800);
+    return () => clearTimeout(saveTimer.current);
+  }, [noteDraft, noteState, lessonId, flushNote]);
+
+  // warn before a full page unload if something is still pending
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (noteState === "Unsaved" || noteState === "Saving…") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [noteState]);
 
   // ask a doubt
   const [askOpen, setAskOpen] = useState(false);
@@ -71,16 +131,25 @@ export default function LessonPlayer() {
     };
   }, [courseId]);
 
-  // load this lesson's note + remember position, once per lesson visit
+  // load this lesson's note + remember position, once per lesson visit.
+  // keyed on `ready` (not `state`) so completing a lesson doesn't reset the draft.
+  const ready = !!state;
   useEffect(() => {
-    if (!state || !lessonId) return;
-    setNoteDraft(notesRef.current[lessonId] || "");
-    setNoteState("");
+    if (!ready || !lessonId) return;
+    const server = notesRef.current[lessonId] || "";
+    // recover an unsynced draft left by a crash / hard refresh
+    const local = readLocalNote(lessonId);
+    const initial = local != null && local !== server ? local : server;
+    setNoteDraft(initial);
+    draftRef.current = initial;
+    setNoteState(initial === server ? "" : "Unsaved");
     if (!visited.current.has(lessonId)) {
       visited.current.add(lessonId);
       api.post(`/enrollments/${courseId}/visit`, { lessonId }).catch(() => {});
     }
-  }, [state, courseId, lessonId]);
+    // save this lesson's note before switching away or unmounting
+    return () => flushNote(lessonId, draftRef.current, { silent: true });
+  }, [ready, courseId, lessonId, flushNote]);
 
   if (err === "not-enrolled")
     return (
@@ -158,16 +227,15 @@ export default function LessonPlayer() {
     setSaving(false);
   };
 
-  const saveNote = async () => {
-    if ((notesRef.current[lessonId] || "") === noteDraft) return;
-    setNoteState("Saving…");
+  const onNoteChange = (e) => {
+    const v = e.target.value;
+    setNoteDraft(v);
+    draftRef.current = v;
+    setNoteState("Unsaved");
     try {
-      await api.put(`/enrollments/${courseId}/notes/${lessonId}`, { text: noteDraft });
-      notesRef.current[lessonId] = noteDraft;
-      setNoteState("Saved");
-    } catch (e) {
-      toast(e.message);
-      setNoteState("Unsaved");
+      localStorage.setItem(noteKey(lessonId), v);
+    } catch {
+      /* private mode / quota — autosave to the server still covers it */
     }
   };
 
@@ -235,16 +303,14 @@ export default function LessonPlayer() {
 
         <div className="lesson-main">
           <div className="lesson-body">
-            {courseComplete && (
-              <div className="done-banner">
-                <PartyPopper />
-                You've completed every lesson in this course.
-              </div>
-            )}
+            <div className="lesson-top">
+              {courseComplete && (
+                <div className="done-banner">
+                  <PartyPopper />
+                  You've completed every lesson in this course.
+                </div>
+              )}
 
-            <LessonContent lesson={lesson} />
-
-            <div className="row" style={{ gap: 12, marginBottom: 16 }}>
               <div>
                 <h3 style={{ marginBottom: 6 }}>{lesson.title}</h3>
                 <div className="type-chip">
@@ -253,14 +319,10 @@ export default function LessonPlayer() {
                   {lesson.durationMin ? ` · ${fmtDuration(lesson.durationMin)}` : ""}
                 </div>
               </div>
-              <button
-                className="btn btn-secondary"
-                style={{ marginLeft: "auto" }}
-                onClick={() => setAskOpen(true)}
-              >
-                <MessageCircleQuestion />
-                Ask a doubt
-              </button>
+            </div>
+
+            <div className="lesson-content-area">
+              <LessonContent lesson={lesson} />
             </div>
 
             <div className="lesson-nav">
@@ -286,25 +348,38 @@ export default function LessonPlayer() {
               </button>
             </div>
 
-            <div className="notes-block">
-              <div className="row" style={{ marginBottom: 6 }}>
-                <h5 style={{ margin: 0 }}>Your notes</h5>
-                <span className="muted-sm" style={{ marginLeft: "auto" }}>
-                  {noteState}
-                </span>
+            <aside className="lesson-aside">
+              <div className="notes-block">
+                <div className="row" style={{ marginBottom: 6 }}>
+                  <h5 style={{ margin: 0 }}>Your notes</h5>
+                  <span
+                    className={"note-status" + (noteState === "Unsaved" ? " is-unsaved" : "")}
+                  >
+                    {noteState === "Saved" && <Check />}
+                    {noteState}
+                  </span>
+                </div>
+                <textarea
+                  className="input"
+                  style={{ minHeight: 160 }}
+                  value={noteDraft}
+                  onChange={onNoteChange}
+                  onBlur={() => flushNote(lessonId, draftRef.current)}
+                  placeholder="Private notes for this lesson — only you can see them"
+                />
+                <div className="note-foot muted-sm">
+                  {noteDraft.trim() ? `${noteDraft.trim().split(/\s+/).length} words` : "Autosaves as you type"}
+                </div>
               </div>
-              <textarea
-                className="input"
-                style={{ minHeight: 96 }}
-                value={noteDraft}
-                onChange={(e) => {
-                  setNoteDraft(e.target.value);
-                  setNoteState("Unsaved");
-                }}
-                onBlur={saveNote}
-                placeholder="Private notes for this lesson — only you can see them"
-              />
-            </div>
+              <button
+                className="btn btn-secondary"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setAskOpen(true)}
+              >
+                <MessageCircleQuestion />
+                Ask a doubt
+              </button>
+            </aside>
           </div>
         </div>
       </div>

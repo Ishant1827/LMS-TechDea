@@ -1,92 +1,164 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GraduationCap } from "lucide-react";
+import AuthLayout from "../components/AuthLayout";
+import PasswordInput from "../components/PasswordInput";
 import { useAuth } from "../context/AuthContext";
 import { roleHome } from "../lib/roles";
+
+const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
 
 export default function Signup() {
   const { register } = useAuth();
   const nav = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
-  const [err, setErr] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirm: "",
+  });
+  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [apiErr, setApiErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const errors = {
+    name: !form.name.trim()
+      ? "Your name is required"
+      : form.name.trim().length < 2
+      ? "That name looks too short"
+      : "",
+    email: !form.email.trim()
+      ? "Email is required"
+      : !emailOk(form.email)
+      ? "Enter a valid email"
+      : "",
+    phone: phoneOk(form.phone) ? "" : "Enter a valid phone number",
+    password: !form.password
+      ? "Password is required"
+      : form.password.length < 6
+      ? "At least 6 characters"
+      : "",
+    confirm:
+      form.confirm !== form.password ? "Passwords don't match" : !form.confirm ? "Re-enter your password" : "",
+  };
+  const showErr = (k) => (touched[k] || submitted) && errors[k];
+
+  const set = (k) => (e) => {
+    setForm({ ...form, [k]: e.target.value });
+    setApiErr("");
+  };
+  const blur = (k) => () => setTouched((t) => ({ ...t, [k]: true }));
 
   const submit = async (e) => {
     e.preventDefault();
-    setErr("");
+    setSubmitted(true);
+    setApiErr("");
+    if (Object.values(errors).some(Boolean)) return;
     setBusy(true);
     try {
-      const user = await register(form);
+      const user = await register({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+      });
       nav(roleHome(user.role), { replace: true });
-    } catch (e) {
-      setErr(e.message);
+    } catch (err) {
+      setApiErr(err.message);
       setBusy(false);
     }
   };
 
   return (
-    <div className="auth-wrap">
-      <div className="brand" style={{ marginBottom: 24 }}>
-        <span className="brand-mark">
-          <GraduationCap />
-        </span>
-        <span className="brand-word">
-          Tech<span>Dea</span>
-        </span>
-      </div>
+    <AuthLayout>
+      <h2>Create your account</h2>
+      <p className="auth-sub">Free — sign up as a student and start any course.</p>
 
-      <div className="card elev-sm">
-        <h3 style={{ marginBottom: 4 }}>Create your account</h3>
-        <p className="text-muted" style={{ marginBottom: 16, fontSize: 13 }}>
-          Sign up as a student — it's free.
-        </p>
-        {err && <div className="form-error">{err}</div>}
-        <form onSubmit={submit}>
-          <div className="field">
-            <label>Full name</label>
-            <input className="input" required value={form.name} onChange={set("name")} />
-          </div>
-          <div className="field">
-            <label>Email</label>
-            <input
-              className="input"
-              type="email"
-              autoComplete="email"
-              required
-              value={form.email}
-              onChange={set("email")}
-            />
-          </div>
-          <div className="field">
-            <label>Phone (optional)</label>
-            <input className="input" value={form.phone} onChange={set("phone")} />
-          </div>
-          <div className="field">
-            <label>Password</label>
-            <input
-              className="input"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              value={form.password}
-              onChange={set("password")}
-            />
-          </div>
-          <button
-            className={"btn btn-primary btn-block" + (busy ? " is-loading" : "")}
-            style={{ justifyContent: "center" }}
-          >
-            Create account
-          </button>
-        </form>
-      </div>
+      {apiErr && <div className="form-error">{apiErr}</div>}
 
-      <p className="text-muted" style={{ fontSize: 13, marginTop: 14 }}>
+      <form onSubmit={submit} noValidate>
+        <div className="field">
+          <label>Full name</label>
+          <input
+            className={"input" + (showErr("name") ? " has-err" : "")}
+            autoComplete="name"
+            autoFocus
+            value={form.name}
+            onChange={set("name")}
+            onBlur={blur("name")}
+          />
+          {showErr("name") && <div className="field-err">{errors.name}</div>}
+        </div>
+
+        <div className="field">
+          <label>Email</label>
+          <input
+            className={"input" + (showErr("email") ? " has-err" : "")}
+            type="email"
+            autoComplete="email"
+            value={form.email}
+            onChange={set("email")}
+            onBlur={blur("email")}
+          />
+          {showErr("email") && <div className="field-err">{errors.email}</div>}
+        </div>
+
+        <div className="field">
+          <label>Phone <span className="text-muted">(optional)</span></label>
+          <input
+            className={"input" + (showErr("phone") ? " has-err" : "")}
+            type="tel"
+            autoComplete="tel"
+            value={form.phone}
+            onChange={set("phone")}
+            onBlur={blur("phone")}
+          />
+          {showErr("phone") && <div className="field-err">{errors.phone}</div>}
+        </div>
+
+        <div className="field">
+          <label>Password</label>
+          <PasswordInput
+            className={showErr("password") ? "has-err" : ""}
+            autoComplete="new-password"
+            value={form.password}
+            onChange={set("password")}
+            onBlur={blur("password")}
+          />
+          {showErr("password") ? (
+            <div className="field-err">{errors.password}</div>
+          ) : (
+            <div className="muted-sm" style={{ marginTop: 4 }}>At least 6 characters.</div>
+          )}
+        </div>
+
+        <div className="field">
+          <label>Confirm password</label>
+          <PasswordInput
+            className={showErr("confirm") ? "has-err" : ""}
+            autoComplete="new-password"
+            value={form.confirm}
+            onChange={set("confirm")}
+            onBlur={blur("confirm")}
+          />
+          {showErr("confirm") && <div className="field-err">{errors.confirm}</div>}
+        </div>
+
+        <button
+          className={"btn btn-primary btn-block" + (busy ? " is-loading" : "")}
+          style={{ justifyContent: "center", marginTop: 4 }}
+          disabled={busy}
+        >
+          Create account
+        </button>
+      </form>
+
+      <p className="auth-foot">
         Already have an account? <Link to="/login">Sign in</Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }

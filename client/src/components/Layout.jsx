@@ -13,14 +13,13 @@ import {
   MessageCircleQuestion,
   BarChart3,
   Library,
-  User,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { initials, cap } from "../lib/format";
 import { roleHome } from "../lib/roles";
 
-// [path, label, Icon, end?]
+// [path, label, Icon, end?]  — Profile is reached from the top-right avatar, not here.
 const STUDENT_NAV = [
   ["/", "Dashboard", LayoutDashboard, true],
   ["/courses", "Browse Courses", Compass, false],
@@ -28,7 +27,6 @@ const STUDENT_NAV = [
   ["/assignments", "Assignments & Quizzes", ClipboardList, false],
   ["/progress", "Progress", TrendingUp, false],
   ["/doubts", "Doubts", MessageCircleQuestion, false],
-  ["/profile", "Profile", User, false],
 ];
 
 const TEACHER_NAV = [
@@ -38,7 +36,6 @@ const TEACHER_NAV = [
   ["/teach/students", "Students", Users, false],
   ["/teach/doubts", "Doubts", MessageCircleQuestion, false],
   ["/teach/performance", "Performance", BarChart3, false],
-  ["/profile", "Profile", User, false],
 ];
 
 // Admin = teacher workspace + admin-only sections.
@@ -49,11 +46,7 @@ const ADMIN_EXTRA = [
 
 function navForRole(role) {
   if (role === "student") return STUDENT_NAV;
-  if (role === "admin") {
-    // insert admin items before Profile
-    const base = TEACHER_NAV.slice(0, -1);
-    return [...base, ...ADMIN_EXTRA, TEACHER_NAV[TEACHER_NAV.length - 1]];
-  }
+  if (role === "admin") return [...TEACHER_NAV, ...ADMIN_EXTRA];
   return TEACHER_NAV;
 }
 

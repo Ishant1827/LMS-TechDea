@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Course = require("../models/Course");
 const asyncHandler = require("../utils/asyncHandler");
 const { signToken } = require("../utils/token");
 
@@ -41,14 +42,22 @@ exports.me = asyncHandler(async (req, res) => {
 // PUT /api/auth/me
 exports.updateMe = asyncHandler(async (req, res) => {
   const { name, email, phone } = req.body;
+  const nameChanged = name && name.trim() && name.trim() !== req.user.name;
+
   if (email && email.toLowerCase() !== req.user.email) {
     const taken = await User.findOne({ email: email.toLowerCase() });
     if (taken) return res.status(409).json({ message: "That email is already in use" });
     req.user.email = email.toLowerCase();
   }
-  if (name) req.user.name = name;
+  if (name && name.trim()) req.user.name = name.trim();
   if (phone !== undefined) req.user.phone = phone;
   await req.user.save();
+
+  // the teacher name shown on a course follows the owner's account name
+  if (nameChanged) {
+    await Course.updateMany({ owner: req.user._id }, { $set: { teacherName: req.user.name } });
+  }
+
   res.json({ user: req.user });
 });
 
