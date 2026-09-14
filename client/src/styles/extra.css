@@ -152,6 +152,14 @@ select.input { appearance: auto; background: #fff; }
 }
 .topbar-user:hover { background: var(--color-neutral-100); }
 .topbar-name { font-size: 13px; font-weight: 700; }
+/* The sidebar carries the brand on desktop. Below 900px it's off-canvas, so
+   without this the logo is invisible until you open the menu.
+   Both halves live here: extra.css loads after app.css, so a base rule here
+   would override a media-query override there. */
+.topbar-brand { display: none; }
+@media (max-width: 900px) {
+  .topbar-brand { display: inline-flex; }
+}
 @media (max-width: 560px) {
   .topbar-name { display: none; }
 }

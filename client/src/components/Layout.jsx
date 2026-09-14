@@ -102,6 +102,11 @@ export default function Layout({ children, bodyClass = "" }) {
           >
             <Menu />
           </button>
+          {/* Below 900px the sidebar is off-canvas, so this is the only place
+              the brand is visible without opening the menu. */}
+          <Link className="brand topbar-brand" to={roleHome(user.role)}>
+            <Brand size={28} tagline={false} />
+          </Link>
           <span className="spacer" />
           <Link className="topbar-user" to="/profile" title={user.name}>
             <span className="topbar-name">{user.name}</span>
