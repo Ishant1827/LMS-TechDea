@@ -922,3 +922,37 @@ select.input { appearance: auto; background: #fff; }
   .manage-head { flex-wrap: wrap; row-gap: 12px; }
   .manage-head .btn { width: 100%; justify-content: center; min-height: 44px; }
 }
+
+/* extra card pieces shared by the Users and Students card lists */
+.mcard-tappable {
+  display: block; width: 100%; text-align: left; font: inherit;
+  border: 1px solid var(--color-divider); cursor: pointer;
+}
+.mcard-tappable:hover { border-color: var(--color-accent-300); }
+.mcard-meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mcard-meta-row > .muted-sm { flex: 1; min-width: 0; }
+.mcard-role { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.mcard-role label { font-size: 12px; color: var(--color-muted); }
+.mcard-role .input { width: auto; min-width: 104px; min-height: 40px; padding: 4px 8px; }
+
+/* ── touch targets on phones ─────────────────────────────────────────────────
+   Several controls were only 14-26px tall, too small to hit reliably. */
+@media (max-width: 700px) {
+  /* star rating was a 14x16px hit area */
+  .stars--input button { min-width: 44px; min-height: 44px; display: inline-flex;
+    align-items: center; justify-content: center; }
+  .stars--input svg { width: 28px; height: 28px; }
+
+  /* "Back" links */
+  a.back, .back { min-height: 40px; align-items: center; }
+
+  /* ghost buttons used as real actions (Leave course, Remove review, tabs) */
+  .btn-ghost { min-height: 40px; padding: 8px 12px; }
+  .chip-row .btn-ghost { min-height: 40px; }
+
+  /* course editor lesson rows: the publish / reorder / edit / delete controls
+     were ~26px icon buttons crammed on one line */
+  .lesson-row .chip-row { width: 100%; gap: 6px; margin-top: 8px; }
+  .lesson-row .chip-row .btn { min-height: 40px; min-width: 40px; justify-content: center; }
+  .lesson-row { flex-wrap: wrap; }
+}

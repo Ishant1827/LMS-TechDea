@@ -6,11 +6,13 @@ import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 import { cap } from "../lib/format";
+import { useIsNarrow } from "../lib/useMediaQuery";
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
+  const narrow = useIsNarrow();
   const [users, setUsers] = useState(null);
   const [roleFilter, setRoleFilter] = useState("");
   const [q, setQ] = useState("");
@@ -144,6 +146,66 @@ export default function AdminUsers() {
 
       {!users ? (
         <CenterLoader />
+      ) : narrow ? (
+        /* The 6-column table pushed the role picker and both action buttons
+           off-screen on a phone, so each account becomes a card. */
+        <div className="mcard-list">
+          {users.length === 0 && <p className="muted-sm">No users match.</p>}
+          {users.map((u) => {
+            const self = u._id === me._id;
+            return (
+              <article key={u._id} className="mcard card elev-sm">
+                <div className="mcard-top">
+                  <span className="mcard-title" style={{ cursor: "default" }}>
+                    {u.name}
+                    {self && <span className="muted-sm"> (you)</span>}
+                  </span>
+                  <span className={"tag " + (u.active ? "tag-accent" : "tag-outline")}>
+                    {u.active ? "Active" : "Off"}
+                  </span>
+                </div>
+                <div className="mcard-sub">{u.email}</div>
+
+                <div className="mcard-stats">
+                  <div>
+                    <b>{u.ownedCourses || 0}</b>
+                    <span>{u.ownedCourses === 1 ? "Course" : "Courses"}</span>
+                  </div>
+                  <div className="mcard-role">
+                    {self ? (
+                      <span className="tag tag-neutral">{cap(u.role)}</span>
+                    ) : (
+                      <>
+                        <label htmlFor={`role-${u._id}`}>Role</label>
+                        <select
+                          id={`role-${u._id}`}
+                          className="input"
+                          value={u.role}
+                          onChange={(e) => setRole(u, e.target.value)}
+                        >
+                          <option value="student">student</option>
+                          <option value="teacher">teacher</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {!self && (
+                  <div className="mcard-actions">
+                    <button className="btn btn-secondary" onClick={() => toggleActive(u)}>
+                      {u.active ? "Deactivate" : "Activate"}
+                    </button>
+                    <button className="btn btn-secondary mcard-del" onClick={() => del(u)}>
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
       ) : (
         <div className="table-wrap">
           <table className="table">

@@ -4,6 +4,7 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import Modal from "../components/Modal";
 import { Bar, CenterLoader } from "../components/Bits";
+import { useIsNarrow } from "../lib/useMediaQuery";
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
@@ -17,6 +18,7 @@ function csvEscape(v) {
 }
 
 export default function TeacherStudents() {
+  const narrow = useIsNarrow();
   const [data, setData] = useState(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
@@ -116,6 +118,41 @@ export default function TeacherStudents() {
 
       {rows.length === 0 ? (
         <p className="muted-sm">No students match.</p>
+      ) : narrow ? (
+        /* The roster table hid the progress bar and status tags on a phone. */
+        <div className="mcard-list">
+          {rows.map((r) => (
+            <button
+              key={r.student._id}
+              className="mcard card elev-sm mcard-tappable"
+              onClick={() => setSel(r)}
+            >
+              <div className="mcard-top">
+                <span className="mcard-title">{r.student.name}</span>
+                <span className="muted-sm" style={{ flex: "none" }}>
+                  {r.overall}%
+                </span>
+              </div>
+              <div className="mcard-sub">{r.student.email}</div>
+
+              <div style={{ margin: "10px 0 8px" }}>
+                <Bar value={r.overall} />
+              </div>
+
+              <div className="mcard-meta-row">
+                <span className="muted-sm">
+                  {r.enrolledCount} course{r.enrolledCount === 1 ? "" : "s"} · active{" "}
+                  {idle(r.daysIdle)}
+                </span>
+                <span className="chip-row" style={{ flex: "none" }}>
+                  {r.stalled && <span className="tag tag-outline">Stalled</span>}
+                  {r.completedCount > 0 && <span className="tag tag-accent">Completed</span>}
+                  {r.notStarted && <span className="tag tag-neutral">Not started</span>}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
       ) : (
         <div className="table-wrap">
           <table className="table">
