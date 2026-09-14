@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, ArrowRight, CalendarClock } from "lucide-react";
+import {
+  Play,
+  ArrowRight,
+  CalendarClock,
+  Library,
+  CheckCircle2,
+  ClipboardList,
+  Trophy,
+  BookOpen,
+  MessageCircleQuestion,
+} from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
-import { Bar, CenterLoader, CourseThumb } from "../components/Bits";
+import { Bar, CenterLoader, CourseThumb, Stat, Ring } from "../components/Bits";
 import { StarsDisplay } from "../components/Stars";
 import { useAuth } from "../context/AuthContext";
 import { typeMeta, fmtDuration } from "../lib/lessonTypes";
@@ -59,6 +69,7 @@ export default function Dashboard() {
   const overall = lessonsTotal ? Math.round((lessonsDone / lessonsTotal) * 100) : 0;
   const mineIds = new Set(enr.map((e) => e.course._id));
   const recommend = discover.filter((c) => !mineIds.has(c._id)).slice(0, 6);
+  const dueCount = (due || []).length;
 
   const nextLine = (e) => {
     if (!e.currentLesson) return `${e.remaining} lesson${e.remaining === 1 ? "" : "s"} left`;
@@ -69,14 +80,19 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <h2 style={{ marginBottom: 2 }}>
-        {greet()}, {user.name.split(" ")[0]}
-      </h2>
-      <p className="text-muted" style={{ marginBottom: 18 }}>
-        {enr.length
-          ? `You're enrolled in ${enr.length} course${enr.length === 1 ? "" : "s"}.`
-          : "Browse the catalog to enrol in your first course."}
-      </p>
+      <div className="dash-head">
+        <div className="dash-head-text">
+          <h2>
+            {greet()}, {user.name.split(" ")[0]}
+          </h2>
+          <p className="sub">
+            {enr.length
+              ? `You're enrolled in ${enr.length} course${enr.length === 1 ? "" : "s"}.`
+              : "Browse the catalog to enrol in your first course."}
+          </p>
+        </div>
+        {enr.length > 0 && <Ring value={overall} sublabel="overall" />}
+      </div>
 
       {/* ── continue learning ─────────────────────────────── */}
       {cont ? (
@@ -119,32 +135,54 @@ export default function Dashboard() {
       {/* ── stat strip ────────────────────────────────────── */}
       {enr.length > 0 && (
         <div className="stat-strip">
-          <div className="card elev-sm stat">
-            <div className="card-title">{enr.length}</div>
-            <div className="card-meta">Enrolled</div>
-          </div>
-          <div className="card elev-sm stat">
-            <div className="card-title">
-              {lessonsDone}
-              <span className="muted-sm">/{lessonsTotal}</span>
-            </div>
-            <div className="card-meta">Lessons done</div>
-          </div>
-          <div className="card elev-sm stat">
-            <div className="card-title">{overall}%</div>
-            <div className="card-meta">Overall progress</div>
-          </div>
-          <div className="card elev-sm stat">
-            <div className="card-title">{completed.length}</div>
-            <div className="card-meta">Courses completed</div>
-          </div>
+          <Stat
+            icon={Library}
+            tone="accent"
+            value={enr.length}
+            label="Enrolled"
+            hint={`${inProgress.length} in progress`}
+            to="/my-learning"
+          />
+          <Stat
+            icon={CheckCircle2}
+            tone="success"
+            value={
+              <>
+                {lessonsDone}
+                <small>/{lessonsTotal}</small>
+              </>
+            }
+            label="Lessons done"
+            hint={lessonsTotal - lessonsDone > 0 ? `${lessonsTotal - lessonsDone} to go` : "all finished"}
+            to="/progress"
+          />
+          <Stat
+            icon={ClipboardList}
+            tone={dueCount ? "warn" : "neutral"}
+            value={dueCount}
+            label="Due soon"
+            hint={dueCount ? "with a deadline" : "nothing pending"}
+            to="/assignments"
+          />
+          <Stat
+            icon={Trophy}
+            tone="neutral"
+            value={completed.length}
+            label="Completed"
+            hint={completed.length ? "well done" : "keep going"}
+            to="/progress"
+          />
         </div>
       )}
 
       {/* ── two-column grid ───────────────────────────────── */}
       <div className="dash-grid">
         <div>
-          <h4 className="section-h">My Learning</h4>
+          <div className="sec-head">
+            <BookOpen />
+            <h4>My Learning</h4>
+            <Link className="sec-link" to="/my-learning">All courses →</Link>
+          </div>
           {enr.length === 0 && <p className="muted-sm">Nothing yet.</p>}
 
           {inProgress.length > 0 && <div className="muted-sm dash-sub">In progress</div>}
@@ -187,7 +225,10 @@ export default function Dashboard() {
         </div>
 
         <div>
-          <h4 className="section-h">Your doubts</h4>
+          <div className="sec-head">
+            <MessageCircleQuestion />
+            <h4>Your doubts</h4>
+          </div>
           {doubts.length === 0 ? (
             <p className="muted-sm">
               No questions yet. Use “Ask a doubt” inside a lesson.
@@ -218,7 +259,10 @@ export default function Dashboard() {
             </>
           )}
 
-          <h4 className="section-h">Due soon</h4>
+          <div className="sec-head">
+            <CalendarClock />
+            <h4>Due soon</h4>
+          </div>
           {!due ? (
             <div className="card elev-sm" style={{ padding: "12px 14px" }}>
               <div className="muted-sm">Loading…</div>

@@ -467,6 +467,11 @@ select.input { appearance: auto; background: #fff; }
   gap: 12px;
   margin-bottom: 22px;
 }
+/* Four across needs ~200px per tile once the icon chip is in; below that the
+   labels start truncating, so drop to two. */
+@media (max-width: 1130px) {
+  .stat-strip { grid-template-columns: repeat(2, 1fr); }
+}
 .stat-strip .stat .card-title { font-size: 22px; }
 
 .dash-grid {
@@ -1018,3 +1023,134 @@ select.input { appearance: auto; background: #fff; }
 }
 /* compact trigger for tight table cells */
 .sel-compact { min-height: 34px; padding: 4px 8px; font-size: 13px; }
+
+/* ── dashboard: stat tiles ───────────────────────────────────────────────────
+   Replaces the bare number-on-white tiles. Icon chip carries the tone, the
+   figure stays the loudest thing, context sits underneath. */
+.statx {
+  flex-direction: row; align-items: center; gap: 13px;
+  padding: 15px 16px; position: relative; overflow: hidden;
+}
+.statx::after {
+  /* faint tonal wash so the tiles aren't flat white */
+  content: ""; position: absolute; inset: auto -30px -40px auto;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: var(--tone-wash, transparent); opacity: .5; pointer-events: none;
+}
+.stat-ic {
+  width: 42px; height: 42px; border-radius: 13px; flex: none;
+  display: grid; place-items: center;
+  background: var(--tone-bg); color: var(--tone-fg);
+}
+.stat-ic svg { width: 19px; height: 19px; }
+.stat-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.stat-value {
+  font-family: var(--font-heading); font-weight: 850; font-size: 25px;
+  letter-spacing: -0.5px; color: var(--color-text);
+}
+.stat-value small { font-size: 15px; font-weight: 700; color: var(--color-neutral-500); }
+.stat-label { font-size: 12.5px; font-weight: 700; color: var(--color-text); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-hint { font-size: 11.5px; color: var(--color-muted); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tone-accent  { --tone-bg: var(--color-accent-100); --tone-fg: var(--color-accent); }
+.tone-success { --tone-bg: #e2f3ec;                 --tone-fg: var(--color-success); }
+.tone-warn    { --tone-bg: #fbf0dd;                 --tone-fg: var(--color-warn); }
+.tone-danger  { --tone-bg: #fbe9e9;                 --tone-fg: var(--color-danger); }
+.tone-neutral { --tone-bg: var(--color-neutral-200);--tone-fg: var(--color-neutral-700); }
+.statx.tone-accent  { --tone-wash: var(--color-accent-100); }
+.statx:has(.tone-accent)  { --tone-wash: #f6f1ff; }
+.statx:has(.tone-success) { --tone-wash: #eef7f3; }
+.statx:has(.tone-warn)    { --tone-wash: #fdf7ec; }
+.statx:has(.tone-danger)  { --tone-wash: #fdf1f1; }
+
+/* ── donut progress ───────────────────────────────────────────────────────── */
+.ring-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+.ring { display: block; flex: none; }
+.ring-track { stroke: var(--color-neutral-200); }
+.ring-fill { stroke: var(--color-accent); transition: stroke-dashoffset .6s ease; }
+.ring-text {
+  font-family: var(--font-heading); font-weight: 850; font-size: 18px;
+  fill: var(--color-text); letter-spacing: -0.5px;
+}
+.ring-sub { font-size: 11.5px; font-weight: 600; color: var(--color-muted); }
+@media (prefers-reduced-motion: reduce) { .ring-fill { transition: none; } }
+
+/* ── dashboard: greeting + section headings ─────────────────────────────── */
+.dash-head {
+  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.dash-head-text { flex: 1; min-width: 200px; }
+.dash-head h2 { margin: 0 0 3px; }
+.dash-head .sub { color: var(--color-muted); font-size: 13.5px; margin: 0; }
+.sec-head {
+  display: flex; align-items: center; gap: 8px; margin: 22px 0 10px;
+}
+.sec-head:first-child { margin-top: 0; }
+.sec-head h4 { margin: 0; font-size: 15px; }
+.sec-head svg { width: 15px; height: 15px; color: var(--color-accent); flex: none; }
+.sec-head .sec-link { margin-left: auto; font-size: 12px; color: var(--color-muted); text-decoration: none; font-weight: 600; }
+.sec-head .sec-link:hover { color: var(--color-accent); }
+
+/* ── dashboard: "jump to" tiles (teacher) ───────────────────────────────── */
+.jump-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.jump-tile {
+  display: flex; flex-direction: row; gap: 9px; align-items: center;
+  padding: 11px 12px; text-decoration: none; color: var(--color-text);
+}
+.jump-tile b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jump-tile .ji {
+  width: 30px; height: 30px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  background: var(--color-accent-100); color: var(--color-accent);
+}
+.jump-tile .ji svg { width: 16px; height: 16px; }
+.jump-tile b { font-size: 13px; font-weight: 700; }
+@media (max-width: 400px) { .jump-grid { grid-template-columns: 1fr; } }
+
+/* ── dashboard: attention rows ──────────────────────────────────────────── */
+.attn-row {
+  display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 11px 13px;
+  margin-bottom: 8px; text-decoration: none; color: var(--color-text);
+  border-left: 3px solid var(--tone-fg, var(--color-neutral-400));
+}
+.attn-row .ai { width: 30px; height: 30px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; background: var(--tone-bg); color: var(--tone-fg); }
+.attn-row .ai svg { width: 15px; height: 15px; }
+.attn-row .at { flex: 1; min-width: 0; }
+.attn-row .at b { display: block; font-size: 13px; font-weight: 700; }
+.attn-row .at span { font-size: 11.5px; color: var(--color-muted); }
+
+/* ── dashboard: doubt rows with an initials avatar ──────────────────────── */
+.doubt-row { display: flex; flex-direction: row; gap: 10px; padding: 11px 13px;
+  margin-bottom: 8px; text-decoration: none; color: var(--color-text); align-items: flex-start; }
+.doubt-row .avatar { flex: none; }
+.doubt-row .avatar { width: 30px; height: 30px; font-size: 11px; }
+.doubt-row .dr-body { flex: 1; min-width: 0; }
+.doubt-row .dr-meta { display: flex; align-items: center; gap: 6px; }
+.doubt-row .dr-meta .who { font-size: 12px; font-weight: 700; }
+.doubt-row .dr-meta .where { font-size: 11.5px; color: var(--color-muted);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doubt-row .dr-text { font-size: 13px; margin-top: 3px; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* friendly empty state used on the dashboards */
+.quiet-note {
+  flex-direction: row; align-items: center; gap: 12px; padding: 15px 16px;
+  border-style: dashed; background: var(--color-soft);
+}
+.quiet-note > svg { width: 20px; height: 20px; color: var(--color-neutral-500); flex: none; }
+.quiet-note b { display: block; font-size: 13px; }
+.quiet-note span { font-size: 12px; color: var(--color-muted); }
+
+/* Two tiles across a phone leaves ~76px for the text once the icon chip is in,
+   which clipped "Lessons done". Trim the chrome and let the label wrap. */
+@media (max-width: 470px) {
+  .statx { padding: 13px; gap: 10px; }
+  .stat-ic { width: 34px; height: 34px; border-radius: 11px; }
+  .stat-ic svg { width: 17px; height: 17px; }
+  .stat-value { font-size: 22px; }
+  .stat-label { white-space: normal; overflow: visible; }
+  .stat-hint { white-space: normal; overflow: visible; }
+}
