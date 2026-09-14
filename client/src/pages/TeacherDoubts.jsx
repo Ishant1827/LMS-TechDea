@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader } from "../components/Bits";
+import Select from "../components/Select";
 import { useToast } from "../context/ToastContext";
 
 const STATUS_TAG = { open: "tag-outline", answered: "tag-accent", resolved: "tag-neutral" };
@@ -130,19 +131,17 @@ export default function TeacherDoubts() {
         <Tab id="resolved" label="Resolved" />
         <Tab id="all" label="All" />
         {courses.length > 1 && (
-          <select
-            className="input"
-            style={{ maxWidth: 220, marginLeft: "auto" }}
-            value={courseId}
-            onChange={(e) => setCourseId(e.target.value)}
-          >
-            <option value="">All courses</option>
-            {courses.map(([cid, title]) => (
-              <option key={cid} value={cid}>
-                {title}
-              </option>
-            ))}
-          </select>
+          <div style={{ maxWidth: 220, marginLeft: "auto", width: "100%" }}>
+            <Select
+              aria-label="Filter by course"
+              value={courseId}
+              onChange={setCourseId}
+              options={[
+                { value: "", label: "All courses" },
+                ...courses.map(([cid, title]) => ({ value: cid, label: title })),
+              ]}
+            />
+          </div>
         )}
       </div>
 

@@ -7,6 +7,7 @@ import { CenterLoader } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
+import { useIsNarrow } from "../lib/useMediaQuery";
 
 const shortDate = (d) =>
   d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
@@ -15,6 +16,7 @@ export default function ManageCourses() {
   const { user } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
+  const narrow = useIsNarrow();
   const [list, setList] = useState(null);
 
   const load = () =>
@@ -74,7 +76,7 @@ export default function ManageCourses() {
 
   return (
     <Layout>
-      <div className="row" style={{ marginBottom: 18 }}>
+      <div className="row manage-head" style={{ marginBottom: 18 }}>
         <h2 style={{ margin: 0 }}>
           {user.role === "admin" ? "All Courses" : "My Courses"}
           {list.length > 0 && <span className="text-muted" style={{ fontWeight: 600 }}> · {list.length}</span>}
@@ -95,6 +97,62 @@ export default function ManageCourses() {
             <Plus />
             New Course
           </Link>
+        </div>
+      ) : narrow ? (
+        /* On a phone the 5-column table pushed every action button off-screen,
+           so each course becomes a self-contained card instead. */
+        <div className="mcard-list">
+          {list.map((c) => (
+            <article key={c._id} className="mcard card elev-sm">
+              <div className="mcard-top">
+                <Link className="mcard-title" to={`/manage/courses/${c._id}`}>
+                  {c.title}
+                </Link>
+                <span className={"tag " + (c.published ? "tag-accent" : "tag-neutral")}>
+                  {c.published ? "Published" : "Draft"}
+                </span>
+              </div>
+
+              <div className="mcard-sub">
+                {user.role === "admin" && `${c.owner?.name || "Unassigned"} · `}
+                Updated {shortDate(c.updatedAt)}
+              </div>
+
+              <div className="mcard-stats">
+                <div>
+                  <b>{c.lessonCount}</b>
+                  <span>{c.lessonCount === 1 ? "Lesson" : "Lessons"}</span>
+                </div>
+                <div>
+                  <b>{c.enrollmentCount}</b>
+                  <span>{c.enrollmentCount === 1 ? "Student" : "Students"}</span>
+                </div>
+              </div>
+
+              <div className="mcard-actions">
+                <Link className="btn btn-secondary" to={`/manage/courses/${c._id}`}>
+                  <Pencil />
+                  Edit
+                </Link>
+                <button className="btn btn-secondary" onClick={() => togglePublish(c)}>
+                  {c.published ? <EyeOff /> : <Eye />}
+                  {c.published ? "Unpublish" : "Publish"}
+                </button>
+                <Link className="btn btn-secondary" to={`/manage/courses/${c._id}/enrollments`}>
+                  <Users />
+                  Students
+                </Link>
+                <button
+                  className="btn btn-secondary mcard-del"
+                  onClick={() => remove(c)}
+                  aria-label={`Delete ${c.title}`}
+                >
+                  <Trash2 />
+                  Delete
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       ) : (
         <div className="table-wrap">

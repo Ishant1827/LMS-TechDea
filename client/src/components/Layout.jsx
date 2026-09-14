@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Compass,
   BookOpen,
-  GraduationCap,
   Menu,
   Users,
   ClipboardList,
@@ -14,6 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import Brand from "./Brand";
 import { initials, cap } from "../lib/format";
 import { roleHome } from "../lib/roles";
 
@@ -61,12 +61,7 @@ export default function Layout({ children, bodyClass = "" }) {
     <div className="app">
       <nav className={"sidebar" + (drawer ? " open" : "")}>
         <Link className="brand" to={roleHome(user.role)} onClick={() => setDrawer(false)}>
-          <span className="brand-mark">
-            <GraduationCap />
-          </span>
-          <span className="brand-word">
-            Tech<span>Dea</span>
-          </span>
+          <Brand />
         </Link>
 
         <div className="sb-user">
@@ -107,6 +102,11 @@ export default function Layout({ children, bodyClass = "" }) {
           >
             <Menu />
           </button>
+          {/* Below 900px the sidebar is off-canvas, so this is the only place
+              the brand is visible without opening the menu. */}
+          <Link className="brand topbar-brand" to={roleHome(user.role)}>
+            <Brand size={28} tagline={false} />
+          </Link>
           <span className="spacer" />
           <Link className="topbar-user" to="/profile" title={user.name}>
             <span className="topbar-name">{user.name}</span>

@@ -16,9 +16,9 @@
   flex-direction: column;
 }
 .auth-hero .brand { align-self: flex-start; }
-.auth-hero .brand-mark { background: rgba(255, 255, 255, 0.16); color: #fff; }
 .auth-hero .brand-word,
 .auth-hero .brand-word span { color: #fff; }
+.auth-hero .brand-tag { color: rgba(255, 255, 255, 0.72); }
 
 .auth-hero-body { margin: auto 0; max-width: 400px; }
 .auth-hero-body h1 { color: #fff; font-size: 34px; line-height: 1.16; margin: 0 0 14px; letter-spacing: -1px; }
@@ -43,7 +43,11 @@
   box-shadow: var(--shadow-md);
   padding: 28px;
 }
-.auth-card-brand { display: none; margin-bottom: 20px; }
+/* The logo belongs on the form card itself, not only in the hero corner. */
+.auth-card-brand { display: inline-flex; margin-bottom: 18px; }
+.auth-card-brand .brand-mark { width: 40px; height: 40px; }
+.auth-card-brand .brand-word { font-size: 21px; }
+.auth-card-brand .brand-tag { font-size: 11px; }
 .auth-card h2 { font-size: 23px; margin-bottom: 4px; }
 .auth-sub { color: var(--color-muted); font-size: 13px; margin-bottom: 20px; }
 .auth-foot { text-align: center; font-size: 13px; color: var(--color-muted); margin-top: 18px; }
@@ -148,6 +152,14 @@ select.input { appearance: auto; background: #fff; }
 }
 .topbar-user:hover { background: var(--color-neutral-100); }
 .topbar-name { font-size: 13px; font-weight: 700; }
+/* The sidebar carries the brand on desktop. Below 900px it's off-canvas, so
+   without this the logo is invisible until you open the menu.
+   Both halves live here: extra.css loads after app.css, so a base rule here
+   would override a media-query override there. */
+.topbar-brand { display: none; }
+@media (max-width: 900px) {
+  .topbar-brand { display: inline-flex; }
+}
 @media (max-width: 560px) {
   .topbar-name { display: none; }
 }
@@ -454,6 +466,11 @@ select.input { appearance: auto; background: #fff; }
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 22px;
+}
+/* Four across needs ~200px per tile once the icon chip is in; below that the
+   labels start truncating, so drop to two. */
+@media (max-width: 1130px) {
+  .stat-strip { grid-template-columns: repeat(2, 1fr); }
 }
 .stat-strip .stat .card-title { font-size: 22px; }
 
@@ -877,4 +894,263 @@ select.input { appearance: auto; background: #fff; }
   background-repeat: no-repeat;
   background-size: 34px 100%, 34px 100%, 15px 100%, 15px 100%;
   background-attachment: local, local, scroll, scroll;
+}
+
+/* ── manage-courses cards (phones) ───────────────────────────────────────────
+   The 5-column table needed 785px and pushed every action button off-screen at
+   375px, so below 700px each course renders as a card instead. */
+.mcard-list { display: flex; flex-direction: column; gap: 12px; }
+.mcard { gap: 0; padding: 14px 15px; }
+
+.mcard-top { display: flex; align-items: flex-start; gap: 10px; }
+.mcard-title {
+  flex: 1; min-width: 0; font-family: var(--font-heading); font-weight: 800;
+  font-size: 15px; line-height: 1.3; color: var(--color-text); text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.mcard-title:hover { color: var(--color-accent); }
+.mcard-top .tag { flex: none; }
+.mcard-sub { font-size: 12px; color: var(--color-muted); margin-top: 3px; }
+
+.mcard-stats {
+  display: flex; gap: 10px; margin: 12px 0;
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  padding: 10px 0;
+}
+.mcard-stats > div { flex: 1; display: flex; align-items: baseline; gap: 6px; }
+.mcard-stats b { font-family: var(--font-heading); font-size: 19px; line-height: 1; }
+.mcard-stats span { font-size: 12px; color: var(--color-muted); }
+
+/* two per row, full-width targets — comfortable to tap */
+.mcard-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* 44px is the comfortable minimum touch target */
+.mcard-actions .btn { justify-content: center; width: 100%; min-height: 44px; }
+.mcard-del { color: var(--color-danger); }
+.mcard-del:hover:not(:disabled) { border-color: var(--color-danger); color: var(--color-danger); }
+
+/* very narrow phones: stack the actions so labels never truncate */
+@media (max-width: 360px) {
+  .mcard-actions { grid-template-columns: 1fr; }
+}
+
+/* page header: stack the title and its primary action on a phone */
+@media (max-width: 700px) {
+  .manage-head { flex-wrap: wrap; row-gap: 12px; }
+  .manage-head .btn { width: 100%; justify-content: center; min-height: 44px; }
+}
+
+/* extra card pieces shared by the Users and Students card lists */
+.mcard-tappable {
+  display: block; width: 100%; text-align: left; font: inherit;
+  border: 1px solid var(--color-divider); cursor: pointer;
+}
+.mcard-tappable:hover { border-color: var(--color-accent-300); }
+.mcard-meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mcard-meta-row > .muted-sm { flex: 1; min-width: 0; }
+.mcard-role { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.mcard-role label { font-size: 12px; color: var(--color-muted); }
+.mcard-role .input { width: auto; min-width: 104px; min-height: 40px; padding: 4px 8px; }
+
+/* ── touch targets on phones ─────────────────────────────────────────────────
+   Several controls were only 14-26px tall, too small to hit reliably. */
+@media (max-width: 700px) {
+  /* star rating was a 14x16px hit area */
+  .stars--input button { min-width: 44px; min-height: 44px; display: inline-flex;
+    align-items: center; justify-content: center; }
+  .stars--input svg { width: 28px; height: 28px; }
+
+  /* "Back" links */
+  a.back, .back { min-height: 40px; align-items: center; }
+
+  /* ghost buttons used as real actions (Leave course, Remove review, tabs) */
+  .btn-ghost { min-height: 40px; padding: 8px 12px; }
+  .chip-row .btn-ghost { min-height: 40px; }
+
+  /* course editor lesson rows: the publish / reorder / edit / delete controls
+     were ~26px icon buttons crammed on one line */
+  .lesson-row .chip-row { width: 100%; gap: 6px; margin-top: 8px; }
+  .lesson-row .chip-row .btn { min-height: 40px; min-width: 40px; justify-content: center; }
+  .lesson-row { flex-wrap: wrap; }
+}
+
+/* ── custom select ───────────────────────────────────────────────────────────
+   A native <select>'s open list is OS chrome and can't be themed, so Select.jsx
+   draws its own listbox. The trigger keeps the .input look. */
+.sel-trigger {
+  display: flex; align-items: center; gap: 8px;
+  text-align: left; cursor: pointer; font: inherit;
+  padding-right: 10px; width: 100%;
+}
+.sel-trigger:disabled { cursor: not-allowed; opacity: .6; }
+.sel-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-value.is-placeholder { color: var(--color-neutral-500); }
+.sel-caret {
+  flex: none; width: 16px; height: 16px; color: var(--color-muted);
+  transition: transform .16s ease;
+}
+.sel-caret.is-open { transform: rotate(180deg); }
+.sel-trigger[aria-expanded="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-100);
+}
+
+.sel-list {
+  z-index: 70; margin: 0; padding: 6px; list-style: none;
+  background: #fff; border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md); overflow-y: auto; overscroll-behavior: contain;
+  animation: sel-in .13s ease-out;
+}
+@keyframes sel-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .sel-list { animation: none; } }
+
+.sel-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px; border-radius: 9px; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; color: var(--color-text);
+}
+.sel-opt > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sel-opt svg { flex: none; width: 15px; height: 15px; color: var(--color-accent); }
+.sel-opt.is-active { background: var(--color-neutral-100); }
+.sel-opt.is-selected { color: var(--color-accent); }
+.sel-opt.is-selected.is-active { background: var(--color-accent-100); }
+.sel-empty { padding: 10px; font-size: 13px; color: var(--color-muted); }
+
+/* comfortable rows on touch screens */
+@media (max-width: 700px) {
+  .sel-opt { padding: 12px 10px; font-size: 14px; }
+  .sel-trigger { min-height: 44px; }
+}
+/* compact trigger for tight table cells */
+.sel-compact { min-height: 34px; padding: 4px 8px; font-size: 13px; }
+
+/* ── dashboard: stat tiles ───────────────────────────────────────────────────
+   Replaces the bare number-on-white tiles. Icon chip carries the tone, the
+   figure stays the loudest thing, context sits underneath. */
+.statx {
+  flex-direction: row; align-items: center; gap: 13px;
+  padding: 15px 16px; position: relative; overflow: hidden;
+}
+.statx::after {
+  /* faint tonal wash so the tiles aren't flat white */
+  content: ""; position: absolute; inset: auto -30px -40px auto;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: var(--tone-wash, transparent); opacity: .5; pointer-events: none;
+}
+.stat-ic {
+  width: 42px; height: 42px; border-radius: 13px; flex: none;
+  display: grid; place-items: center;
+  background: var(--tone-bg); color: var(--tone-fg);
+}
+.stat-ic svg { width: 19px; height: 19px; }
+.stat-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.stat-value {
+  font-family: var(--font-heading); font-weight: 850; font-size: 25px;
+  letter-spacing: -0.5px; color: var(--color-text);
+}
+.stat-value small { font-size: 15px; font-weight: 700; color: var(--color-neutral-500); }
+.stat-label { font-size: 12.5px; font-weight: 700; color: var(--color-text); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-hint { font-size: 11.5px; color: var(--color-muted); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tone-accent  { --tone-bg: var(--color-accent-100); --tone-fg: var(--color-accent); }
+.tone-success { --tone-bg: #e2f3ec;                 --tone-fg: var(--color-success); }
+.tone-warn    { --tone-bg: #fbf0dd;                 --tone-fg: var(--color-warn); }
+.tone-danger  { --tone-bg: #fbe9e9;                 --tone-fg: var(--color-danger); }
+.tone-neutral { --tone-bg: var(--color-neutral-200);--tone-fg: var(--color-neutral-700); }
+.statx.tone-accent  { --tone-wash: var(--color-accent-100); }
+.statx:has(.tone-accent)  { --tone-wash: #f6f1ff; }
+.statx:has(.tone-success) { --tone-wash: #eef7f3; }
+.statx:has(.tone-warn)    { --tone-wash: #fdf7ec; }
+.statx:has(.tone-danger)  { --tone-wash: #fdf1f1; }
+
+/* ── donut progress ───────────────────────────────────────────────────────── */
+.ring-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+.ring { display: block; flex: none; }
+.ring-track { stroke: var(--color-neutral-200); }
+.ring-fill { stroke: var(--color-accent); transition: stroke-dashoffset .6s ease; }
+.ring-text {
+  font-family: var(--font-heading); font-weight: 850; font-size: 18px;
+  fill: var(--color-text); letter-spacing: -0.5px;
+}
+.ring-sub { font-size: 11.5px; font-weight: 600; color: var(--color-muted); }
+@media (prefers-reduced-motion: reduce) { .ring-fill { transition: none; } }
+
+/* ── dashboard: greeting + section headings ─────────────────────────────── */
+.dash-head {
+  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.dash-head-text { flex: 1; min-width: 200px; }
+.dash-head h2 { margin: 0 0 3px; }
+.dash-head .sub { color: var(--color-muted); font-size: 13.5px; margin: 0; }
+.sec-head {
+  display: flex; align-items: center; gap: 8px; margin: 22px 0 10px;
+}
+.sec-head:first-child { margin-top: 0; }
+.sec-head h4 { margin: 0; font-size: 15px; }
+.sec-head svg { width: 15px; height: 15px; color: var(--color-accent); flex: none; }
+.sec-head .sec-link { margin-left: auto; font-size: 12px; color: var(--color-muted); text-decoration: none; font-weight: 600; }
+.sec-head .sec-link:hover { color: var(--color-accent); }
+
+/* ── dashboard: "jump to" tiles (teacher) ───────────────────────────────── */
+.jump-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.jump-tile {
+  display: flex; flex-direction: row; gap: 9px; align-items: center;
+  padding: 11px 12px; text-decoration: none; color: var(--color-text);
+}
+.jump-tile b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jump-tile .ji {
+  width: 30px; height: 30px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  background: var(--color-accent-100); color: var(--color-accent);
+}
+.jump-tile .ji svg { width: 16px; height: 16px; }
+.jump-tile b { font-size: 13px; font-weight: 700; }
+@media (max-width: 400px) { .jump-grid { grid-template-columns: 1fr; } }
+
+/* ── dashboard: attention rows ──────────────────────────────────────────── */
+.attn-row {
+  display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 11px 13px;
+  margin-bottom: 8px; text-decoration: none; color: var(--color-text);
+  border-left: 3px solid var(--tone-fg, var(--color-neutral-400));
+}
+.attn-row .ai { width: 30px; height: 30px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; background: var(--tone-bg); color: var(--tone-fg); }
+.attn-row .ai svg { width: 15px; height: 15px; }
+.attn-row .at { flex: 1; min-width: 0; }
+.attn-row .at b { display: block; font-size: 13px; font-weight: 700; }
+.attn-row .at span { font-size: 11.5px; color: var(--color-muted); }
+
+/* ── dashboard: doubt rows with an initials avatar ──────────────────────── */
+.doubt-row { display: flex; flex-direction: row; gap: 10px; padding: 11px 13px;
+  margin-bottom: 8px; text-decoration: none; color: var(--color-text); align-items: flex-start; }
+.doubt-row .avatar { flex: none; }
+.doubt-row .avatar { width: 30px; height: 30px; font-size: 11px; }
+.doubt-row .dr-body { flex: 1; min-width: 0; }
+.doubt-row .dr-meta { display: flex; align-items: center; gap: 6px; }
+.doubt-row .dr-meta .who { font-size: 12px; font-weight: 700; }
+.doubt-row .dr-meta .where { font-size: 11.5px; color: var(--color-muted);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doubt-row .dr-text { font-size: 13px; margin-top: 3px; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* friendly empty state used on the dashboards */
+.quiet-note {
+  flex-direction: row; align-items: center; gap: 12px; padding: 15px 16px;
+  border-style: dashed; background: var(--color-soft);
+}
+.quiet-note > svg { width: 20px; height: 20px; color: var(--color-neutral-500); flex: none; }
+.quiet-note b { display: block; font-size: 13px; }
+.quiet-note span { font-size: 12px; color: var(--color-muted); }
+
+/* Two tiles across a phone leaves ~76px for the text once the icon chip is in,
+   which clipped "Lessons done". Trim the chrome and let the label wrap. */
+@media (max-width: 470px) {
+  .statx { padding: 13px; gap: 10px; }
+  .stat-ic { width: 34px; height: 34px; border-radius: 11px; }
+  .stat-ic svg { width: 17px; height: 17px; }
+  .stat-value { font-size: 22px; }
+  .stat-label { white-space: normal; overflow: visible; }
+  .stat-hint { white-space: normal; overflow: visible; }
 }

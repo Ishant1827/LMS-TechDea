@@ -4,6 +4,7 @@ import { ClipboardList } from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader } from "../components/Bits";
+import Select from "../components/Select";
 
 export default function TeacherPerformance() {
   const [courses, setCourses] = useState(null);
@@ -41,18 +42,14 @@ export default function TeacherPerformance() {
       <div className="row" style={{ marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>Performance</h2>
         {courses.length > 0 && (
-          <select
-            className="input"
-            style={{ maxWidth: 260, marginLeft: "auto" }}
-            value={courseId}
-            onChange={(e) => setCourseId(e.target.value)}
-          >
-            {courses.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
+          <div style={{ maxWidth: 260, marginLeft: "auto", width: "100%" }}>
+            <Select
+              aria-label="Course"
+              value={courseId}
+              onChange={setCourseId}
+              options={courses.map((c) => ({ value: c._id, label: c.title }))}
+            />
+          </div>
         )}
       </div>
 
