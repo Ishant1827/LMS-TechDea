@@ -5,6 +5,7 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { kindMeta, fmtDateTime } from "../lib/assessments";
 
 const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
@@ -93,6 +94,7 @@ function QuizReview({ questions, answers }) {
 /* ── take / submit ─────────────────────────────────────────────────────── */
 function AttemptForm({ a, onDone }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [text, setText] = useState("");
   const [link, setLink] = useState("");
   const [answers, setAnswers] = useState(() => (a.questions || []).map(() => -1));
@@ -110,7 +112,15 @@ function AttemptForm({ a, onDone }) {
       return;
     }
     if (!auto && a.kind === "quiz" && answered < total) {
-      if (!window.confirm(`${total - answered} question(s) unanswered. Submit anyway?`)) return;
+      const left = total - answered;
+      const ok = await confirm({
+        title: "Submit with unanswered questions?",
+        message: `${left} question${left === 1 ? "" : "s"} still unanswered.`,
+        detail: "You get one attempt, so unanswered questions will be marked wrong.",
+        confirmLabel: "Submit anyway",
+        danger: true,
+      });
+      if (!ok) return;
     }
     submittedRef.current = true;
     setBusy(true);

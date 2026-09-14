@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, Navigate, useParams, useNavigate } from "react-router-dom";
 import {
   GraduationCap,
   X,
@@ -10,6 +10,8 @@ import {
   ChevronRight,
   PartyPopper,
   MessageCircleQuestion,
+  Menu,
+  ListTree,
 } from "lucide-react";
 import api from "../api/client";
 import { BootLoader } from "../components/Bits";
@@ -36,6 +38,8 @@ export default function LessonPlayer() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const visited = useRef(new Set());
+  // curriculum drawer — only reachable below 900px, where the sidebar is off-canvas
+  const [navOpen, setNavOpen] = useState(false);
 
   // notes
   const notesRef = useRef({}); // server-confirmed { lessonId: text }
@@ -101,6 +105,15 @@ export default function LessonPlayer() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [noteState]);
+
+  // the drawer is a navigation surface — close it once a lesson is picked
+  useEffect(() => setNavOpen(false), [lessonId]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e) => e.key === "Escape" && setNavOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [navOpen]);
 
   // ask a doubt
   const [askOpen, setAskOpen] = useState(false);
@@ -184,10 +197,8 @@ export default function LessonPlayer() {
     );
 
   const idx = lessons.findIndex((l) => l._id === lessonId);
-  if (idx < 0) {
-    nav(`/learn/${courseId}/${lessons[0]._id}`, { replace: true });
-    return null;
-  }
+  // Redirect declaratively — calling nav() here would be a state update during render.
+  if (idx < 0) return <Navigate to={`/learn/${courseId}/${lessons[0]._id}`} replace />;
   const lesson = lessons[idx];
   const isDone = doneSet.has(String(lesson._id));
   const courseComplete = doneSet.size >= lessons.length;
@@ -256,6 +267,14 @@ export default function LessonPlayer() {
   return (
     <div className="learn-shell">
       <header className="flowbar">
+        <button
+          className="icon-btn menu-btn"
+          onClick={() => setNavOpen(true)}
+          aria-label="Lessons in this course"
+          aria-expanded={navOpen}
+        >
+          <Menu />
+        </button>
         <Link className="brand" to="/">
           <span className="brand-mark">
             <GraduationCap />
@@ -273,8 +292,22 @@ export default function LessonPlayer() {
         </Link>
       </header>
 
+      <div
+        className={"scrim" + (navOpen ? " show" : "")}
+        onClick={() => setNavOpen(false)}
+      />
+
       <div className="lesson-wrap">
-        <aside className="curriculum">
+        <aside className={"curriculum" + (navOpen ? " open" : "")}>
+          <div className="curriculum-head">
+            <ListTree />
+            <strong>
+              {lessons.length} lesson{lessons.length === 1 ? "" : "s"}
+            </strong>
+            <button className="icon-btn" onClick={() => setNavOpen(false)} aria-label="Close lessons">
+              <X />
+            </button>
+          </div>
           {modules.map((m) => (
             <div key={m.name}>
               <div className="mod-label">{m.name}</div>

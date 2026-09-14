@@ -8,6 +8,7 @@ import LessonContent from "../components/LessonContent";
 import Modal from "../components/Modal";
 import { StarsDisplay, StarsInput } from "../components/Stars";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { typeMeta, fmtDuration } from "../lib/lessonTypes";
 
 function groupByModule(lessons) {
@@ -29,28 +30,38 @@ const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { month: "short
 export default function CourseDetails() {
   const { id } = useParams();
   const toast = useToast();
+  const confirm = useConfirm();
   const [data, setData] = useState(null);
   const [owned, setOwned] = useState(false);
+  // where "Go to Course" should land — the lesson the student left off on
+  const [resumeLessonId, setResumeLessonId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // reviews
   const [rev, setRev] = useState(null); // { reviews, avg, count, mine }
+  const [revFailed, setRevFailed] = useState(false);
   const [rDraft, setRDraft] = useState({ rating: 0, text: "" });
   const [rSaving, setRSaving] = useState(false);
 
   const loadReviews = () =>
-    api.get(`/courses/${id}/reviews`).then((r) => {
-      setRev(r.data);
-      if (r.data.mine) setRDraft({ rating: r.data.mine.rating, text: r.data.mine.text || "" });
-    });
+    api
+      .get(`/courses/${id}/reviews`)
+      .then((r) => {
+        setRev(r.data);
+        setRevFailed(false);
+        if (r.data.mine) setRDraft({ rating: r.data.mine.rating, text: r.data.mine.text || "" });
+      })
+      .catch(() => setRevFailed(true));
 
   useEffect(() => {
     Promise.all([api.get(`/courses/${id}`), api.get("/enrollments/mine")])
       .then(([c, m]) => {
         setData(c.data);
-        setOwned(m.data.enrollments.some((e) => e.course._id === id));
+        const mine = m.data.enrollments.find((e) => e.course._id === id);
+        setOwned(!!mine);
+        setResumeLessonId(mine?.currentLessonId || null);
       })
       .catch(() => setNotFound(true));
     loadReviews();
@@ -83,7 +94,13 @@ export default function CourseDetails() {
   };
 
   const deleteReview = async () => {
-    if (!window.confirm("Remove your review?")) return;
+    const ok = await confirm({
+      title: "Remove your review?",
+      message: "Your rating and comment will be deleted from this course.",
+      confirmLabel: "Remove review",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/courses/${id}/reviews/mine`);
       setRDraft({ rating: 0, text: "" });
@@ -113,7 +130,18 @@ export default function CourseDetails() {
   const { course, lessons } = data;
   const firstLesson = lessons[0];
   const groups = groupByModule(lessons);
-  const totalTime = course.minutes ? fmtDuration(course.minutes) : `${course.hours}h`;
+  // resume where they left off; fall back to lesson 1 if the pointer is stale
+  const resumeTarget =
+    (resumeLessonId && lessons.some((l) => l._id === resumeLessonId) && resumeLessonId) ||
+    firstLesson?._id ||
+    null;
+  // Real lesson minutes are the truth; `hours` is only the teacher's estimate
+  // while a course is still being built, so show it only when there's no content yet.
+  const totalTime = course.minutes
+    ? fmtDuration(course.minutes)
+    : course.hours
+    ? `~${course.hours}h`
+    : "";
 
   return (
     <Layout>
@@ -132,7 +160,8 @@ export default function CourseDetails() {
 
           <h2 style={{ marginBottom: 4 }}>{course.title}</h2>
           <div className="card-meta" style={{ marginBottom: 6 }}>
-            Teacher: {course.teacherName || "—"} · {course.lessonCount} lessons · {totalTime}
+            Teacher: {course.teacherName || "—"} · {course.lessonCount} lessons
+            {totalTime ? ` · ${totalTime}` : ""}
           </div>
           {course.reviewCount > 0 && (
             <div className="card-meta" style={{ marginBottom: 14 }}>
@@ -233,7 +262,14 @@ export default function CourseDetails() {
             </form>
           )}
 
-          {!rev ? (
+          {revFailed ? (
+            <p className="muted-sm">
+              Couldn't load reviews.{" "}
+              <button className="linklike" onClick={loadReviews}>
+                Try again
+              </button>
+            </p>
+          ) : !rev ? (
             <p className="muted-sm">Loading reviews…</p>
           ) : rev.reviews.length === 0 ? (
             <p className="muted-sm">No reviews yet{owned ? " — be the first." : "."}</p>
@@ -260,9 +296,9 @@ export default function CourseDetails() {
             <Link
               className="btn btn-secondary btn-block"
               style={{ justifyContent: "center" }}
-              to={firstLesson ? `/learn/${course._id}/${firstLesson._id}` : "/my-learning"}
+              to={resumeTarget ? `/learn/${course._id}/${resumeTarget}` : "/my-learning"}
             >
-              Go to Course
+              {resumeLessonId && resumeLessonId !== firstLesson?._id ? "Resume Course" : "Go to Course"}
             </Link>
           ) : (
             <>
@@ -286,10 +322,12 @@ export default function CourseDetails() {
             </>
           )}
           <div className="hr" />
-          <div className="card-meta">
-            <Clock />
-            {totalTime} of content
-          </div>
+          {totalTime && (
+            <div className="card-meta">
+              <Clock />
+              {totalTime} of content
+            </div>
+          )}
           <div className="card-meta">
             <BookOpen />
             {course.lessonCount} lessons

@@ -4,9 +4,11 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import { Bar, CenterLoader, CourseThumb } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 export default function MyLearning() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [list, setList] = useState(null);
 
   const load = () =>
@@ -27,7 +29,17 @@ export default function MyLearning() {
   }, []);
 
   const leave = async (e) => {
-    if (!window.confirm(`Leave "${e.course.title}"? Your progress will be removed.`)) return;
+    const ok = await confirm({
+      title: "Leave this course?",
+      message: `You'll be un-enrolled from "${e.course.title}".`,
+      detail:
+        e.completed > 0
+          ? `Your progress (${e.completed} of ${e.total} lessons) and your notes for this course will be deleted. You can enrol again, but you'll start over.`
+          : "You can enrol again at any time.",
+      confirmLabel: "Leave course",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/enrollments/${e.course._id}`);
       setList((l) => l.filter((x) => x._id !== e._id));

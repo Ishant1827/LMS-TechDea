@@ -20,10 +20,15 @@ export default function Profile() {
 
   const save = async (e) => {
     e.preventDefault();
+    if (!p.name.trim()) return toast("Your name can't be empty");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email.trim())) return toast("Enter a valid email");
     setBusy(true);
     try {
       const { data } = await api.put("/auth/me", p);
       patchUser(data.user);
+      // re-seed the form from the server so the fields can never drift from
+      // what was actually stored
+      setP({ name: data.user.name, email: data.user.email, phone: data.user.phone || "" });
       toast("Changes saved");
     } catch (e) {
       toast(e.message);

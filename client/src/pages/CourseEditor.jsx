@@ -7,6 +7,7 @@ import Modal from "../components/Modal";
 import CoursePreview from "../components/CoursePreview";
 import { CenterLoader, CourseThumb } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 import { LESSON_TYPES, typeMeta, fmtDuration } from "../lib/lessonTypes";
 import { fileToResizedDataUrl } from "../lib/image";
@@ -94,6 +95,8 @@ export default function CourseEditor() {
   const saveCourse = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) return toast("Title is required");
+    const hrs = Number(form.hours) || 0;
+    if (hrs < 0 || hrs > 500) return toast("Estimated time must be between 0 and 500 hours");
     setSaving(true);
     try {
       if (isNew) {
@@ -188,10 +191,15 @@ export default function CourseEditor() {
           className="input"
           type="number"
           min="0"
+          max="500"
+          step="1"
           style={{ maxWidth: 140 }}
           value={form.hours}
           onChange={set("hours")}
         />
+        <div className="muted-sm" style={{ marginTop: 4 }}>
+          Only shown until the course has lessons — after that students see the real total.
+        </div>
       </div>
       <div className="field">
         <label>What you'll learn (one per line)</label>
@@ -330,6 +338,7 @@ function groupByModule(lessons) {
 
 function LessonManager({ courseId, lessons, setLessons }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [draft, setDraft] = useState(blankLesson);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -390,7 +399,15 @@ function LessonManager({ courseId, lessons, setLessons }) {
   };
 
   const del = async (l) => {
-    if (!window.confirm(`Delete lesson "${l.title}"?`)) return;
+    const ok = await confirm({
+      title: "Delete this lesson?",
+      message: `"${l.title}" will be permanently deleted.`,
+      detail:
+        "Students who already completed it will see their progress for this course recalculated.",
+      confirmLabel: "Delete lesson",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/courses/${courseId}/lessons/${l._id}`);
       await reload();

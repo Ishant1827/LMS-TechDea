@@ -11,7 +11,7 @@ export default function PasswordInput({ className = "", ...props }) {
         className="pw-toggle"
         onClick={() => setShow((s) => !s)}
         aria-label={show ? "Hide password" : "Show password"}
-        tabIndex={-1}
+        aria-pressed={show}
       >
         {show ? <EyeOff /> : <Eye />}
       </button>

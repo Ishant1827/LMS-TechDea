@@ -6,13 +6,11 @@ import {
   BookOpen,
   GraduationCap,
   Menu,
-  Bell,
   Users,
   ClipboardList,
   TrendingUp,
   MessageCircleQuestion,
   BarChart3,
-  Library,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -39,10 +37,7 @@ const TEACHER_NAV = [
 ];
 
 // Admin = teacher workspace + admin-only sections.
-const ADMIN_EXTRA = [
-  ["/admin/users", "Users", Users, false],
-  ["/admin/catalog", "Catalog", Library, false],
-];
+const ADMIN_EXTRA = [["/admin/users", "Users", Users, false]];
 
 function navForRole(role) {
   if (role === "student") return STUDENT_NAV;
@@ -112,9 +107,7 @@ export default function Layout({ children, bodyClass = "" }) {
           >
             <Menu />
           </button>
-          <button className="icon-btn spacer" aria-label="Notifications">
-            <Bell />
-          </button>
+          <span className="spacer" />
           <Link className="topbar-user" to="/profile" title={user.name}>
             <span className="topbar-name">{user.name}</span>
             <div className="avatar avatar-initials">{initials(user.name)}</div>

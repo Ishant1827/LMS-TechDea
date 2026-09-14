@@ -29,7 +29,6 @@ import TeacherAssignments from "./pages/TeacherAssignments";
 import TeacherDoubts from "./pages/TeacherDoubts";
 import TeacherPerformance from "./pages/TeacherPerformance";
 import AdminUsers from "./pages/AdminUsers";
-import AdminCatalog from "./pages/AdminCatalog";
 
 // shared
 import Profile from "./pages/Profile";
@@ -76,7 +75,6 @@ export default function App() {
 
       {/* ── admin only ────────────────────────────────────── */}
       <Route path="/admin/users" element={S(<AdminUsers />, ["admin"])} />
-      <Route path="/admin/catalog" element={S(<AdminCatalog />, ["admin"])} />
 
       {/* ── shared ────────────────────────────────────────── */}
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

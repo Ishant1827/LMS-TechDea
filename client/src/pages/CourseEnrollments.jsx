@@ -49,7 +49,8 @@ export default function CourseEnrollments() {
       {data.enrollments.length === 0 ? (
         <p className="muted-sm">No one has enrolled yet.</p>
       ) : (
-        <table className="table">
+        <div className="table-wrap">
+          <table className="table">
           <thead>
             <tr>
               <th>Student</th>
@@ -72,7 +73,8 @@ export default function CourseEnrollments() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
     </Layout>
   );
