@@ -16,7 +16,6 @@
   flex-direction: column;
 }
 .auth-hero .brand { align-self: flex-start; }
-.auth-hero .brand-mark { background: rgba(255, 255, 255, 0.16); color: #fff; }
 .auth-hero .brand-word,
 .auth-hero .brand-word span { color: #fff; }
 
@@ -43,7 +42,10 @@
   box-shadow: var(--shadow-md);
   padding: 28px;
 }
-.auth-card-brand { display: none; margin-bottom: 20px; }
+/* The logo belongs on the form card itself, not only in the hero corner. */
+.auth-card-brand { display: inline-flex; margin-bottom: 18px; }
+.auth-card-brand .brand-mark { width: 40px; height: 40px; }
+.auth-card-brand .brand-word { font-size: 21px; }
 .auth-card h2 { font-size: 23px; margin-bottom: 4px; }
 .auth-sub { color: var(--color-muted); font-size: 13px; margin-bottom: 20px; }
 .auth-foot { text-align: center; font-size: 13px; color: var(--color-muted); margin-top: 18px; }

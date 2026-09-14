@@ -219,6 +219,7 @@ a.plain { color: var(--color-text); text-decoration: none; }
 .loader-screen { min-height: 55vh; display: grid; place-items: center; }
 .loader-screen--boot { min-height: 100vh; align-content: center; gap: 22px; }
 .loader-screen--boot .brand-word { font-size: 22px; }
+.loader-screen--boot .brand-mark { width: 44px; height: 44px; }
 
 /* pending button — spinner replaces the label, no layout shift */
 .btn.is-loading { position: relative; pointer-events: none; color: transparent !important; }

@@ -10,9 +10,17 @@ export function Bar({ value = 0 }) {
   );
 }
 
+// Full-screen splash while the session is restored — the first thing anyone
+// sees, so it carries the brand rather than a bare spinner.
 export function BootLoader({ label = "Loading…" }) {
   return (
     <div className="loader-screen loader-screen--boot">
+      <span className="brand">
+        <img className="brand-mark" src="/techdea-logo.png" alt="" width="44" height="44" />
+        <span className="brand-word">
+          Tech<span>Dea</span>
+        </span>
+      </span>
       <div className="loader-block">
         <span className="spinner" /> <span>{label}</span>
       </div>
