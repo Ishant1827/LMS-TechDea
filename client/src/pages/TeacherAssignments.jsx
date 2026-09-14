@@ -15,6 +15,7 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import Modal from "../components/Modal";
 import { CenterLoader } from "../components/Bits";
+import Select from "../components/Select";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { kindMeta, fmtDate, fmtDateTime } from "../lib/assessments";
@@ -594,15 +595,16 @@ export default function TeacherAssignments() {
         <>
           <div className="asmt-toolbar">
             <div className="course-select">
-              <label>Course</label>
-              <select className="input" value={courseId} onChange={(e) => setCourseId(e.target.value)}>
-                {courses.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.title}
-                    {c.published ? "" : " (draft)"}
-                  </option>
-                ))}
-              </select>
+              <label id="asmt-course-label">Course</label>
+              <Select
+                aria-label="Course"
+                value={courseId}
+                onChange={setCourseId}
+                options={courses.map((c) => ({
+                  value: c._id,
+                  label: c.title + (c.published ? "" : " (draft)"),
+                }))}
+              />
             </div>
           </div>
 

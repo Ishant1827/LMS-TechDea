@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader } from "../components/Bits";
+import Select from "../components/Select";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
@@ -109,10 +110,15 @@ export default function AdminUsers() {
           </div>
           <div className="field">
             <label>Role</label>
-            <select className="input" value={draft.role} onChange={set("role")}>
-              <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
-            </select>
+            <Select
+              aria-label="Role"
+              value={draft.role}
+              onChange={(v) => setDraft((d) => ({ ...d, role: v }))}
+              options={[
+                { value: "teacher", label: "Teacher" },
+                { value: "admin", label: "Admin" },
+              ]}
+            />
           </div>
         </div>
         <button
@@ -131,17 +137,19 @@ export default function AdminUsers() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select
-          className="input"
-          style={{ maxWidth: 160 }}
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-        >
-          <option value="">All roles</option>
-          <option value="student">Students</option>
-          <option value="teacher">Teachers</option>
-          <option value="admin">Admins</option>
-        </select>
+        <div style={{ maxWidth: 180, flex: "1 1 140px" }}>
+          <Select
+            aria-label="Filter by role"
+            value={roleFilter}
+            onChange={setRoleFilter}
+            options={[
+              { value: "", label: "All roles" },
+              { value: "student", label: "Students" },
+              { value: "teacher", label: "Teachers" },
+              { value: "admin", label: "Admins" },
+            ]}
+          />
+        </div>
       </div>
 
       {!users ? (
@@ -177,16 +185,16 @@ export default function AdminUsers() {
                     ) : (
                       <>
                         <label htmlFor={`role-${u._id}`}>Role</label>
-                        <select
+                        <Select
                           id={`role-${u._id}`}
-                          className="input"
                           value={u.role}
-                          onChange={(e) => setRole(u, e.target.value)}
-                        >
-                          <option value="student">student</option>
-                          <option value="teacher">teacher</option>
-                          <option value="admin">admin</option>
-                        </select>
+                          onChange={(v) => setRole(u, v)}
+                          options={[
+                            { value: "student", label: "student" },
+                            { value: "teacher", label: "teacher" },
+                            { value: "admin", label: "admin" },
+                          ]}
+                        />
                       </>
                     )}
                   </div>
@@ -233,16 +241,18 @@ export default function AdminUsers() {
                     {self ? (
                       cap(u.role)
                     ) : (
-                      <select
-                        className="input"
-                        style={{ minHeight: 34, padding: "4px 8px", width: 110 }}
+                      <Select
+                        aria-label={`Role for ${u.name}`}
+                        className="sel-compact"
+                        style={{ width: 118 }}
                         value={u.role}
-                        onChange={(e) => setRole(u, e.target.value)}
-                      >
-                        <option value="student">student</option>
-                        <option value="teacher">teacher</option>
-                        <option value="admin">admin</option>
-                      </select>
+                        onChange={(v) => setRole(u, v)}
+                        options={[
+                            { value: "student", label: "student" },
+                            { value: "teacher", label: "teacher" },
+                            { value: "admin", label: "admin" },
+                          ]}
+                      />
                     )}
                   </td>
                   <td>{u.ownedCourses || 0}</td>

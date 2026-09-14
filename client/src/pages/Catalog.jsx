@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader, CourseThumb } from "../components/Bits";
+import Select from "../components/Select";
 import { StarsDisplay } from "../components/Stars";
 import { useToast } from "../context/ToastContext";
 import { fmtDuration } from "../lib/lessonTypes";
@@ -76,29 +77,30 @@ export default function Catalog() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All categories</option>
-          {(data?.categories || []).map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select className="input" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-          <option value="">Any level</option>
-          {DIFFICULTIES.map((d) => (
-            <option key={d} value={d}>
-              {cap(d)}
-            </option>
-          ))}
-        </select>
-        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
-          {SORTS.map(([v, label]) => (
-            <option key={v} value={v}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <Select
+          aria-label="Category"
+          value={category}
+          onChange={setCategory}
+          options={[
+            { value: "", label: "All categories" },
+            ...(data?.categories || []).map((c) => ({ value: c, label: c })),
+          ]}
+        />
+        <Select
+          aria-label="Difficulty"
+          value={difficulty}
+          onChange={setDifficulty}
+          options={[
+            { value: "", label: "Any level" },
+            ...DIFFICULTIES.map((d) => ({ value: d, label: cap(d) })),
+          ]}
+        />
+        <Select
+          aria-label="Sort by"
+          value={sort}
+          onChange={setSort}
+          options={SORTS.map(([v, label]) => ({ value: v, label }))}
+        />
       </div>
 
       {!data ? (

@@ -6,6 +6,7 @@ import Layout from "../components/Layout";
 import Modal from "../components/Modal";
 import CoursePreview from "../components/CoursePreview";
 import { CenterLoader, CourseThumb } from "../components/Bits";
+import Select from "../components/Select";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
@@ -175,14 +176,15 @@ export default function CourseEditor() {
         </div>
         <div className="field">
           <label>Difficulty</label>
-          <select className="input" value={form.difficulty} onChange={set("difficulty")}>
-            <option value="">Not set</option>
-            {DIFFICULTIES.map((d) => (
-              <option key={d} value={d}>
-                {d[0].toUpperCase() + d.slice(1)}
-              </option>
-            ))}
-          </select>
+          <Select
+            aria-label="Difficulty"
+            value={form.difficulty}
+            onChange={(v) => setForm((f) => ({ ...f, difficulty: v }))}
+            options={[
+              { value: "", label: "Not set" },
+              ...DIFFICULTIES.map((d) => ({ value: d, label: d[0].toUpperCase() + d.slice(1) })),
+            ]}
+          />
         </div>
       </div>
       <div className="field">

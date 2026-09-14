@@ -4,6 +4,7 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import Modal from "../components/Modal";
 import { Bar, CenterLoader } from "../components/Bits";
+import Select from "../components/Select";
 import { useIsNarrow } from "../lib/useMediaQuery";
 
 const fmtDate = (d) =>
@@ -99,17 +100,19 @@ export default function TeacherStudents() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select
-          className="input"
-          style={{ maxWidth: 170 }}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="all">All</option>
-          <option value="notstarted">Not started</option>
-          <option value="stalled">Stalled</option>
-          <option value="completed">Completed something</option>
-        </select>
+        <div style={{ maxWidth: 190, flex: "1 1 150px" }}>
+          <Select
+            aria-label="Filter students"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "All" },
+              { value: "notstarted", label: "Not started" },
+              { value: "stalled", label: "Stalled" },
+              { value: "completed", label: "Completed something" },
+            ]}
+          />
+        </div>
         <button className="btn btn-secondary" style={{ marginLeft: "auto" }} onClick={exportCsv}>
           <Download />
           Export CSV
