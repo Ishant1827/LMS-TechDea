@@ -101,10 +101,11 @@ export default function TeacherDoubts() {
       </Layout>
     );
 
-  const counts = doubts.reduce((a, d) => ((a[d.status] = (a[d.status] || 0) + 1), a), {});
-  const shown = doubts.filter(
-    (d) => (tab === "all" || d.status === tab) && (!courseId || d.course?._id === courseId)
-  );
+  // Count within the current course filter, so the tab badges always describe
+  // the list you're actually looking at.
+  const inScope = doubts.filter((d) => !courseId || d.course?._id === courseId);
+  const counts = inScope.reduce((a, d) => ((a[d.status] = (a[d.status] || 0) + 1), a), {});
+  const shown = inScope.filter((d) => tab === "all" || d.status === tab);
 
   const Tab = ({ id, label }) => (
     <button

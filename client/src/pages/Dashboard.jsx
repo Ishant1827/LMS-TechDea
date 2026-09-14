@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, ArrowRight } from "lucide-react";
+import { Play, ArrowRight, CalendarClock } from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import { Bar, CenterLoader, CourseThumb } from "../components/Bits";
 import { StarsDisplay } from "../components/Stars";
 import { useAuth } from "../context/AuthContext";
 import { typeMeta, fmtDuration } from "../lib/lessonTypes";
+import { kindMeta, dueLabel, isOverdue } from "../lib/assessments";
 
 const greet = () => {
   const h = new Date().getHours();
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const [enr, setEnr] = useState(null);
   const [doubts, setDoubts] = useState([]);
   const [discover, setDiscover] = useState([]);
+  const [due, setDue] = useState(null); // null = still loading
 
   useEffect(() => {
     api.get("/enrollments/mine").then((r) => setEnr(r.data.enrollments)).catch(() => setEnr([]));
@@ -28,6 +30,18 @@ export default function Dashboard() {
       .get("/courses", { params: { sort: "rating", limit: 8 } })
       .then((r) => setDiscover(r.data.courses))
       .catch(() => {});
+    // "Due soon" — unsubmitted work that has a deadline, soonest first
+    api
+      .get("/assessments/mine")
+      .then((r) =>
+        setDue(
+          r.data.assessments
+            .filter((a) => !a.submission && a.dueAt)
+            .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
+            .slice(0, 4)
+        )
+      )
+      .catch(() => setDue([]));
   }, []);
 
   if (!enr)
@@ -205,11 +219,47 @@ export default function Dashboard() {
           )}
 
           <h4 className="section-h">Due soon</h4>
-          <div className="card elev-sm" style={{ padding: "12px 14px" }}>
-            <div className="muted-sm">
-              Assignments &amp; quizzes with due dates will show up here.
+          {!due ? (
+            <div className="card elev-sm" style={{ padding: "12px 14px" }}>
+              <div className="muted-sm">Loading…</div>
             </div>
-          </div>
+          ) : due.length === 0 ? (
+            <div className="card elev-sm" style={{ padding: "12px 14px" }}>
+              <div className="muted-sm">Nothing due right now.</div>
+            </div>
+          ) : (
+            <>
+              {due.map((a) => {
+                const { Icon, label } = kindMeta(a.kind);
+                const late = isOverdue(a.dueAt);
+                return (
+                  <Link
+                    key={a._id}
+                    className="card elev-sm plain clickable"
+                    style={{ marginBottom: 8, padding: "10px 12px" }}
+                    to={`/assignments/${a._id}`}
+                  >
+                    <div className="row" style={{ gap: 6 }}>
+                      <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
+                        <Icon size={12} /> {label} · {a.course?.title}
+                      </span>
+                      <span
+                        className={"due-chip" + (late ? " is-overdue" : "")}
+                        style={{ flex: "none" }}
+                      >
+                        <CalendarClock />
+                        {dueLabel(a.dueAt)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{a.title}</div>
+                  </Link>
+                );
+              })}
+              <Link className="muted-sm" to="/assignments">
+                All assignments →
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

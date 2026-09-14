@@ -3,12 +3,14 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 import { cap } from "../lib/format";
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
   const toast = useToast();
+  const confirm = useConfirm();
   const [users, setUsers] = useState(null);
   const [roleFilter, setRoleFilter] = useState("");
   const [q, setQ] = useState("");
@@ -65,7 +67,14 @@ export default function AdminUsers() {
   };
 
   const del = async (u) => {
-    if (!window.confirm(`Delete ${u.name}?`)) return;
+    const ok = await confirm({
+      title: "Delete this account?",
+      message: `${u.name} (${u.email}) will be permanently deleted.`,
+      detail: "Their enrolments and course progress are removed with them. This can't be undone.",
+      confirmLabel: "Delete account",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/users/${u._id}`);
       toast("User deleted");
@@ -136,7 +145,8 @@ export default function AdminUsers() {
       {!users ? (
         <CenterLoader />
       ) : (
-        <table className="table">
+        <div className="table-wrap">
+          <table className="table">
           <thead>
             <tr>
               <th>Name</th>
@@ -199,7 +209,8 @@ export default function AdminUsers() {
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
     </Layout>
   );

@@ -20,16 +20,29 @@ export const fmtDateTime = (d) =>
       })
     : "";
 
-// "in 3 days" / "2 days ago" / "today"
+const startOfDay = (x) => {
+  const d = new Date(x);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+// "due in 3 days" / "2 days overdue" / "due today"
+// Whether it's late is decided on the real instant, so this never contradicts
+// isOverdue(); the count is in calendar days, which is what "in 3 days" means.
+// (Math.round absorbs the 23/25-hour days around a DST change.)
 export function dueLabel(d) {
   if (!d) return "";
-  const ms = new Date(d) - new Date();
-  const days = Math.round(ms / 86400000);
-  if (days === 0) return "due today";
-  if (days === 1) return "due tomorrow";
-  if (days === -1) return "1 day overdue";
-  if (days < 0) return `${-days} days overdue`;
-  return `due in ${days} days`;
+  const now = new Date();
+  const target = new Date(d);
+  const dayGap = Math.round((startOfDay(target) - startOfDay(now)) / 86400000);
+
+  if (target < now) {
+    if (dayGap === 0) return "overdue";
+    return dayGap === -1 ? "1 day overdue" : `${-dayGap} days overdue`;
+  }
+  if (dayGap === 0) return "due today";
+  if (dayGap === 1) return "due tomorrow";
+  return `due in ${dayGap} days`;
 }
 export const isOverdue = (d) => !!d && new Date(d) < new Date();
 

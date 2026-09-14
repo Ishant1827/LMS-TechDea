@@ -5,6 +5,7 @@ import api from "../api/client";
 import Layout from "../components/Layout";
 import { CenterLoader } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 
 const shortDate = (d) =>
@@ -13,6 +14,7 @@ const shortDate = (d) =>
 export default function ManageCourses() {
   const { user } = useAuth();
   const toast = useToast();
+  const confirm = useConfirm();
   const [list, setList] = useState(null);
 
   const load = () =>
@@ -36,7 +38,24 @@ export default function ManageCourses() {
   };
 
   const remove = async (c) => {
-    if (!window.confirm(`Delete "${c.title}" and all its lessons?`)) return;
+    // Spell out everything the server cascade actually destroys — the old
+    // prompt only mentioned lessons, but enrolments and grades go too.
+    const also = [
+      c.lessonCount ? `${c.lessonCount} lesson${c.lessonCount === 1 ? "" : "s"}` : null,
+      c.enrollmentCount
+        ? `${c.enrollmentCount} student enrolment${c.enrollmentCount === 1 ? "" : "s"} and their progress`
+        : null,
+      "every assignment, quiz and graded submission on it",
+    ].filter(Boolean);
+
+    const ok = await confirm({
+      title: "Delete this course?",
+      message: `"${c.title}" will be permanently deleted.`,
+      detail: `This also deletes ${also.join(", ")}. This can't be undone.`,
+      confirmLabel: "Delete course",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/courses/${c._id}`);
       setList((l) => l.filter((x) => x._id !== c._id));

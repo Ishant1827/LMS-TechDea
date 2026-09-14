@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Eye, EyeOff, Inbox, X, Check } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  Inbox,
+  X,
+  Check,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
 import Modal from "../components/Modal";
 import { CenterLoader } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { kindMeta, fmtDate, fmtDateTime } from "../lib/assessments";
 
 const dateValue = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
@@ -258,6 +270,7 @@ function GradeRow({ a, sub, onGraded }) {
   const [score, setScore] = useState(sub.score ?? "");
   const [feedback, setFeedback] = useState(sub.feedback || "");
   const [busy, setBusy] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
   const save = async () => {
     setBusy(true);
@@ -309,6 +322,45 @@ function GradeRow({ a, sub, onGraded }) {
                 </i>
               ))}
             </div>
+          )}
+          {a.questions?.length > 0 && (
+            <>
+              <button
+                className="btn btn-ghost"
+                style={{ marginTop: 6 }}
+                aria-expanded={showAnswers}
+                onClick={() => setShowAnswers((s) => !s)}
+              >
+                {showAnswers ? <ChevronUp /> : <ChevronDown />}
+                {showAnswers ? "Hide answers" : "Show answers"}
+              </button>
+              {showAnswers && (
+                <ol className="qz-review">
+                  {a.questions.map((q, i) => {
+                    const picked = sub.answers?.[i];
+                    const right = picked === q.correctIndex;
+                    return (
+                      <li key={q._id || i}>
+                        <div className="qz-review-q">{q.text}</div>
+                        <div className={"qz-review-a" + (right ? " is-right" : " is-wrong")}>
+                          {right ? <Check /> : <X />}
+                          <span>
+                            {picked >= 0 && q.options[picked] != null
+                              ? q.options[picked]
+                              : "No answer"}
+                          </span>
+                        </div>
+                        {!right && (
+                          <div className="qz-review-key">
+                            Correct: {q.options[q.correctIndex]}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </>
           )}
         </>
       ) : (
@@ -429,6 +481,7 @@ function SubmissionsInbox({ assessmentId, onClose }) {
 /* ══ page ═══════════════════════════════════════════════════════════════ */
 export default function TeacherAssignments() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [courses, setCourses] = useState(null);
   const [courseId, setCourseId] = useState("");
   const [list, setList] = useState(null);
@@ -476,7 +529,17 @@ export default function TeacherAssignments() {
   };
 
   const remove = async (a) => {
-    if (!window.confirm(`Delete "${a.title}" and all its submissions?`)) return;
+    const n = a.submittedCount || 0;
+    const ok = await confirm({
+      title: `Delete this ${kindMeta(a.kind).label.toLowerCase()}?`,
+      message: `"${a.title}" will be permanently deleted.`,
+      detail: n
+        ? `${n} student submission${n === 1 ? "" : "s"}, including any grades and feedback, will be deleted with it. This can't be undone.`
+        : "Nothing has been submitted yet. This can't be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/assessments/${a._id}`);
       setList((l) => l.filter((x) => x._id !== a._id));

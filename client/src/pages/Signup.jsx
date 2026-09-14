@@ -41,8 +41,12 @@ export default function Signup() {
       : form.password.length < 6
       ? "At least 6 characters"
       : "",
-    confirm:
-      form.confirm !== form.password ? "Passwords don't match" : !form.confirm ? "Re-enter your password" : "",
+    // check "empty" before "mismatch" — an untouched field isn't a mismatch
+    confirm: !form.confirm
+      ? "Re-enter your password"
+      : form.confirm !== form.password
+      ? "Passwords don't match"
+      : "",
   };
   const showErr = (k) => (touched[k] || submitted) && errors[k];
 

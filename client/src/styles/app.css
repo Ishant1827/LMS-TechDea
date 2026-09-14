@@ -173,7 +173,10 @@ a.plain { color: var(--color-text); text-decoration: none; }
 .lesson-aside .notes-block textarea { resize: vertical; }
 /* keep prose readable even though the content column is now full-width */
 .lesson-content-area > .reading-body { max-width: 80ch; }
-.lesson-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--color-divider); }
+.lesson-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--color-divider); }
+
+/* Close row inside the curriculum — only shown when it becomes a drawer (≤900px). */
+.curriculum-head { display: none; }
 
 /* video / media block */
 .media { background: var(--color-neutral-900); display: flex; align-items: center; justify-content: center; color: #8a8194; border-radius: 18px; }
@@ -250,12 +253,28 @@ a.plain { color: var(--color-text); text-decoration: none; }
     background: rgba(23, 17, 38, .45); }
   .grid-3 { grid-template-columns: 1fr; }
   .grid-2, .split { grid-template-columns: 1fr; }
-  .curriculum { display: none; }
+  /* the curriculum becomes an off-canvas drawer, opened from the flowbar menu */
+  .curriculum {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 82vw; max-width: 300px; max-height: none; height: 100%;
+    padding: 14px 15px 24px;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+    z-index: 40; box-shadow: var(--shadow-lg); overflow-y: auto;
+  }
+  .curriculum.open { transform: none; }
+  .curriculum-head {
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 10px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .curriculum-head strong { font-size: 13px; flex: 1; min-width: 0; }
   .topbar, .flowbar { padding-left: 20px; padding-right: 20px; }
   .body { padding: 24px 20px; }
   .lesson-body {
     padding: 24px 20px;
-    grid-template-columns: 1fr;
+    /* minmax(0,…) — a bare 1fr can't shrink below its content's min-width,
+       which pushed the nav row past the viewport. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "header" "content" "nav" "aside";
     column-gap: 0;
   }
