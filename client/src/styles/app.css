@@ -39,12 +39,21 @@ body { margin: 0; background: var(--color-bg); color: var(--color-text);
   width: 32px; height: 32px; flex: none;
   display: block; object-fit: contain;
 }
+.brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.12; }
 .brand-word { font-family: var(--font-heading); font-weight: 850; font-size: 19px; letter-spacing: -0.5px; color: var(--color-text); }
 .brand-word span { color: var(--color-accent); }
+.brand-tag {
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0;
+  color: var(--color-muted); margin-top: 2px;
+  /* it only just fits the 250px sidebar — truncate rather than spill if a
+     fallback font renders wider than Inter */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 .sidebar .brand { padding: 4px 8px 18px; }
 .sidebar .brand-word { color: #fff; }
 .sidebar .brand-word span { color: var(--color-accent-400); }
+.sidebar .brand-tag { color: #8f879d; }
 
 .sb-user {
   display: flex; gap: 10px; align-items: center; padding: 12px 10px;
@@ -220,6 +229,7 @@ a.plain { color: var(--color-text); text-decoration: none; }
 .loader-screen--boot { min-height: 100vh; align-content: center; gap: 22px; }
 .loader-screen--boot .brand-word { font-size: 22px; }
 .loader-screen--boot .brand-mark { width: 44px; height: 44px; }
+.loader-screen--boot .brand-tag { font-size: 11.5px; }
 
 /* pending button — spinner replaces the label, no layout shift */
 .btn.is-loading { position: relative; pointer-events: none; color: transparent !important; }

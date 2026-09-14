@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Play, BookOpen } from "lucide-react";
+import Brand from "./Brand";
 
 export function Bar({ value = 0 }) {
   const v = Math.max(0, Math.min(100, value));
@@ -16,10 +17,7 @@ export function BootLoader({ label = "Loading…" }) {
   return (
     <div className="loader-screen loader-screen--boot">
       <span className="brand">
-        <img className="brand-mark" src="/techdea-logo.png" alt="" width="44" height="44" />
-        <span className="brand-word">
-          Tech<span>Dea</span>
-        </span>
+        <Brand size={44} />
       </span>
       <div className="loader-block">
         <span className="spinner" /> <span>{label}</span>

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import api from "../api/client";
 import { BootLoader } from "../components/Bits";
+import Brand from "../components/Brand";
 import LessonContent from "../components/LessonContent";
 import Modal from "../components/Modal";
 import { useToast } from "../context/ToastContext";
@@ -275,10 +276,7 @@ export default function LessonPlayer() {
           <Menu />
         </button>
         <Link className="brand" to="/">
-          <img className="brand-mark" src="/techdea-logo.png" alt="" width="32" height="32" />
-          <span className="brand-word">
-            Tech<span>Dea</span>
-          </span>
+          <Brand size={28} tagline={false} />
         </Link>
         <span className="title">{course.title}</span>
         <span className="text-muted spacer" style={{ fontSize: 13 }}>

@@ -1,13 +1,11 @@
 import { Link } from "react-router-dom";
 import { PlayCircle, BadgeCheck, MessagesSquare } from "lucide-react";
+import Brand from "./Brand";
 
-function Brand({ className }) {
+function BrandLink({ className }) {
   return (
     <Link to="/login" className={"brand " + (className || "")}>
-      <img className="brand-mark" src="/techdea-logo.png" alt="" width="32" height="32" />
-      <span className="brand-word">
-        Tech<span>Dea</span>
-      </span>
+      <Brand />
     </Link>
   );
 }
@@ -18,7 +16,7 @@ export default function AuthLayout({ children }) {
   return (
     <div className="auth">
       <aside className="auth-hero">
-        <Brand />
+        <BrandLink />
         <div className="auth-hero-body">
           <h1>Learn it. Build it. Prove it.</h1>
           <p>
@@ -45,7 +43,7 @@ export default function AuthLayout({ children }) {
 
       <main className="auth-panel">
         <div className="auth-card">
-          <Brand className="auth-card-brand" />
+          <BrandLink className="auth-card-brand" />
           {children}
         </div>
       </main>

@@ -18,6 +18,7 @@
 .auth-hero .brand { align-self: flex-start; }
 .auth-hero .brand-word,
 .auth-hero .brand-word span { color: #fff; }
+.auth-hero .brand-tag { color: rgba(255, 255, 255, 0.72); }
 
 .auth-hero-body { margin: auto 0; max-width: 400px; }
 .auth-hero-body h1 { color: #fff; font-size: 34px; line-height: 1.16; margin: 0 0 14px; letter-spacing: -1px; }
@@ -46,6 +47,7 @@
 .auth-card-brand { display: inline-flex; margin-bottom: 18px; }
 .auth-card-brand .brand-mark { width: 40px; height: 40px; }
 .auth-card-brand .brand-word { font-size: 21px; }
+.auth-card-brand .brand-tag { font-size: 11px; }
 .auth-card h2 { font-size: 23px; margin-bottom: 4px; }
 .auth-sub { color: var(--color-muted); font-size: 13px; margin-bottom: 20px; }
 .auth-foot { text-align: center; font-size: 13px; color: var(--color-muted); margin-top: 18px; }

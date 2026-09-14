@@ -13,6 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import Brand from "./Brand";
 import { initials, cap } from "../lib/format";
 import { roleHome } from "../lib/roles";
 
@@ -60,10 +61,7 @@ export default function Layout({ children, bodyClass = "" }) {
     <div className="app">
       <nav className={"sidebar" + (drawer ? " open" : "")}>
         <Link className="brand" to={roleHome(user.role)} onClick={() => setDrawer(false)}>
-          <img className="brand-mark" src="/techdea-logo.png" alt="" width="32" height="32" />
-          <span className="brand-word">
-            Tech<span>Dea</span>
-          </span>
+          <Brand />
         </Link>
 
         <div className="sb-user">
