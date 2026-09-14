@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams, useNavigate } from "react-router-dom";
 import {
-  GraduationCap,
   X,
   Check,
   Play,
@@ -276,9 +275,7 @@ export default function LessonPlayer() {
           <Menu />
         </button>
         <Link className="brand" to="/">
-          <span className="brand-mark">
-            <GraduationCap />
-          </span>
+          <img className="brand-mark" src="/techdea-logo.png" alt="" width="32" height="32" />
           <span className="brand-word">
             Tech<span>Dea</span>
           </span>

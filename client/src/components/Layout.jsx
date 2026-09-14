@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Compass,
   BookOpen,
-  GraduationCap,
   Menu,
   Users,
   ClipboardList,
@@ -61,9 +60,7 @@ export default function Layout({ children, bodyClass = "" }) {
     <div className="app">
       <nav className={"sidebar" + (drawer ? " open" : "")}>
         <Link className="brand" to={roleHome(user.role)} onClick={() => setDrawer(false)}>
-          <span className="brand-mark">
-            <GraduationCap />
-          </span>
+          <img className="brand-mark" src="/techdea-logo.png" alt="" width="32" height="32" />
           <span className="brand-word">
             Tech<span>Dea</span>
           </span>

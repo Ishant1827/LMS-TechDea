@@ -1,12 +1,10 @@
 import { Link } from "react-router-dom";
-import { GraduationCap, PlayCircle, BadgeCheck, MessagesSquare } from "lucide-react";
+import { PlayCircle, BadgeCheck, MessagesSquare } from "lucide-react";
 
 function Brand({ className }) {
   return (
     <Link to="/login" className={"brand " + (className || "")}>
-      <span className="brand-mark">
-        <GraduationCap />
-      </span>
+      <img className="brand-mark" src="/techdea-logo.png" alt="" width="32" height="32" />
       <span className="brand-word">
         Tech<span>Dea</span>
       </span>
