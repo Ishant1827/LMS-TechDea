@@ -1,25 +1,13 @@
 /* ════════════════════════════════════════════════════════════════════════════
    Stylesheet entry point. main.jsx imports this file and nothing else.
 
-   ORDER IS SIGNIFICANT — these sheets are plain global CSS and later rules are
-   expected to win over earlier ones. The sequence below is the exact order the
-   rules appeared in before they were split out of the old `extra.css`, so the
-   cascade is unchanged. Add new feature sheets at the end.
+   ORDER IS SIGNIFICANT — these are plain global sheets where later rules are
+   expected to beat earlier ones. Add new rules to the end of screens.css, or
+   add a new sheet at the end of this list.
    ════════════════════════════════════════════════════════════════════════════ */
 
-/* foundations */
-@import "./design-system.css";   /* tokens + base component classes */
+@import "./design-system.css";   /* tokens + base classes (.btn .card .tag .table) */
 @import "./app-shell.css";       /* sidebar, top bar, page frame, loaders */
-
-/* features, in cascade order */
-@import "./auth.css";
-@import "./tables.css";
-@import "./lesson-content.css";
-@import "./dashboard.css";
-@import "./assessments.css";
-@import "./confirm-dialog.css";
-@import "./submission-review.css";
-@import "./responsive.css";
-@import "./select.css";
-@import "./dashboard-widgets.css";
-@import "./profile.css";
+@import "./auth.css";            /* login / signup / forgot-password */
+@import "./screens.css";         /* every screen inside the shell */
+@import "./responsive.css";      /* phone breakpoints, last so they win */

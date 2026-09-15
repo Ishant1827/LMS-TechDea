@@ -9,15 +9,15 @@ import Signup from "@/features/auth/pages/Signup";
 import ForgotPassword from "@/features/auth/pages/ForgotPassword";
 
 // student
-import Dashboard from "@/features/student/pages/Dashboard";
-import Catalog from "@/features/student/pages/Catalog";
-import CourseDetails from "@/features/student/pages/CourseDetails";
-import MyLearning from "@/features/student/pages/MyLearning";
-import LessonPlayer from "@/features/student/pages/LessonPlayer";
-import ProgressPage from "@/features/student/pages/ProgressPage";
-import StudentAssignments from "@/features/student/pages/StudentAssignments";
-import AssessmentDetail from "@/features/student/pages/AssessmentDetail";
-import StudentDoubts from "@/features/student/pages/StudentDoubts";
+import Dashboard from "@/features/student/Dashboard";
+import Catalog from "@/features/student/Catalog";
+import CourseDetails from "@/features/student/CourseDetails";
+import MyLearning from "@/features/student/MyLearning";
+import LessonPlayer from "@/features/student/LessonPlayer";
+import ProgressPage from "@/features/student/ProgressPage";
+import StudentAssignments from "@/features/student/StudentAssignments";
+import AssessmentDetail from "@/features/student/AssessmentDetail";
+import StudentDoubts from "@/features/student/StudentDoubts";
 
 // teacher / admin
 import TeacherDashboard from "@/features/teacher/pages/TeacherDashboard";
@@ -28,10 +28,10 @@ import TeacherStudents from "@/features/teacher/pages/TeacherStudents";
 import TeacherAssignments from "@/features/teacher/pages/TeacherAssignments";
 import TeacherDoubts from "@/features/teacher/pages/TeacherDoubts";
 import TeacherPerformance from "@/features/teacher/pages/TeacherPerformance";
-import AdminUsers from "@/features/admin/pages/AdminUsers";
+import AdminUsers from "@/features/admin/AdminUsers";
 
 // shared
-import Profile from "@/features/account/pages/Profile";
+import Profile from "@/features/account/Profile";
 import NotFound from "./NotFound";
 
 const student = ["student"];

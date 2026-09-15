@@ -22,6 +22,12 @@ same vocabulary: a `<feature>` folder owns its own screens and logic, and
 `shared/` holds what more than one feature needs. To change a screen, open the
 folder named after it — everything that screen owns is inside.
 
+> **Finding things fast:** don't browse the tree. In VS Code, `Ctrl+P` then a few
+> letters of the filename jumps straight there (`dash` → `Dashboard.jsx`), and
+> `Ctrl+Shift+F` searches contents. Server files are named `<feature>.routes.js`
+> / `<feature>.controller.js` / `<Entity>.model.js`, so typing `course.` lists
+> that whole feature at once.
+
 ### `server/` — Express API
 
 Each folder under `modules/` is one slice of the domain and holds its **routes,
@@ -64,17 +70,17 @@ Pages are grouped by **who uses them**, which is the same split the router and
 client/src/
 ├── app/                    App.jsx (the route table), main.jsx, NotFound.jsx
 ├── features/
-│   ├── auth/               Login, Signup, ForgotPassword + AuthContext,
-│   │                       AuthLayout, ProtectedRoute
-│   ├── student/pages/      Dashboard, Catalog, CourseDetails, MyLearning,
+│   ├── auth/pages/         Login, Signup, ForgotPassword
+│   │   └── components/     AuthLayout, ProtectedRoute  (+ AuthContext.jsx)
+│   ├── student/            Dashboard, Catalog, CourseDetails, MyLearning,
 │   │                       LessonPlayer, ProgressPage, StudentAssignments,
 │   │                       AssessmentDetail, StudentDoubts
-│   ├── teacher/            TeacherDashboard, ManageCourses, CourseEditor,
-│   │                       CourseEnrollments, TeacherStudents,
-│   │                       TeacherAssignments, TeacherDoubts,
-│   │                       TeacherPerformance + CoursePreview
-│   ├── admin/pages/        AdminUsers
-│   └── account/pages/      Profile  (shared by every signed-in role)
+│   ├── teacher/pages/      TeacherDashboard, ManageCourses, CourseEditor,
+│   │   │                   CourseEnrollments, TeacherStudents,
+│   │   │                   TeacherAssignments, TeacherDoubts, TeacherPerformance
+│   │   └── components/     CoursePreview
+│   ├── admin/              AdminUsers
+│   └── account/            Profile  (shared by every signed-in role)
 ├── shared/
 │   ├── api/client.js       axios instance, token header, 401 handling
 │   ├── components/
@@ -89,6 +95,10 @@ client/src/
 │                           lessonTypes, roles, safeUrl
 └── styles/                 index.css imports the rest — see below
 ```
+
+A feature only gets `pages/` + `components/` subfolders once it has both —
+`auth/` and `teacher/` do, the rest keep their screens at the top level rather
+than adding a folder that holds one thing.
 
 **Imports use the `@` alias** for `client/src`, so a path never changes when a
 file moves depth:
@@ -111,13 +121,17 @@ client/src/styles/
 ├── index.css               the entry — ORDER MATTERS, see the note inside
 ├── design-system.css       tokens + base classes (.btn, .card, .tag, .table…)
 ├── app-shell.css           sidebar, top bar, page frame, loaders
-└── auth · tables · lesson-content · dashboard · assessments · confirm-dialog
-    submission-review · responsive · select · dashboard-widgets · profile
+├── auth.css                login / signup / forgot-password
+├── screens.css             every screen inside the shell, in labelled sections
+└── responsive.css          phone breakpoints, last so they win
 ```
 
 These are plain global sheets where later rules are meant to beat earlier ones,
-so `index.css` keeps them in a fixed order. **Add new feature sheets at the
-end**, and add the `@import` rather than importing CSS from a component.
+so `index.css` keeps them in a fixed order. `screens.css` is signposted with
+`══════════ SECTION ══════════` banners — search for `TABLES`, `DASHBOARD`,
+`ASSESSMENTS`, `PROFILE` and so on to jump. **Add new rules at the end of
+`screens.css`** rather than importing CSS from a component, which would put it
+in the cascade at an unpredictable point.
 
 ## Prerequisites
 
