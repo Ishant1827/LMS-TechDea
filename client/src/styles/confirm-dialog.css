@@ -1,0 +1,19 @@
+/* Destructive-action button + confirm dialog (replaces the native window.confirm) */
+
+/* ── destructive action button + confirm dialog ──────────────────────────────
+   Replaces the native window.confirm() that used to guard deletes. */
+.btn-danger { background: var(--color-danger); color: #fff; border-color: var(--color-danger);
+  box-shadow: 0 8px 20px rgba(199, 59, 59, .20); }
+.btn-danger:hover:not(:disabled) { background: #b03333; border-color: #b03333; transform: translateY(-1px); }
+.btn-danger:active:not(:disabled) { background: #9a2d2d; transform: none; }
+
+.confirm-body { font-size: 14px; margin: 0 0 6px; }
+.confirm-detail { font-size: 13px; color: var(--color-muted); line-height: 1.55; margin: 0 0 4px; }
+.confirm-detail strong { color: var(--color-text); }
+.confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.confirm-actions .btn { min-width: 96px; justify-content: center; }
+@media (max-width: 480px) {
+  .confirm-actions { flex-direction: column-reverse; }
+  .confirm-actions .btn { width: 100%; }
+}
+

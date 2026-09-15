@@ -1,0 +1,191 @@
+/* Auth screens — login, signup, forgot-password (split gradient hero + form) */
+
+/* ── auth (login / register) ───────────────────────────────────────────── */
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 460px) 1fr;
+  background: var(--color-bg);
+}
+
+.auth-hero {
+  background: linear-gradient(160deg, var(--color-accent-800), var(--color-accent) 55%, var(--color-accent-500));
+  color: #fff;
+  padding: 40px 44px;
+  display: flex;
+  flex-direction: column;
+}
+.auth-hero .brand { align-self: flex-start; }
+.auth-hero .brand-word,
+.auth-hero .brand-word span { color: #fff; }
+.auth-hero .brand-tag { color: rgba(255, 255, 255, 0.72); }
+
+.auth-hero-body { margin: auto 0; max-width: 400px; }
+.auth-hero-body h1 { color: #fff; font-size: 34px; line-height: 1.16; margin: 0 0 14px; letter-spacing: -1px; }
+.auth-hero-body > p { color: rgba(255, 255, 255, 0.82); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+.auth-hero-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 13px; }
+.auth-hero-list li { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: rgba(255, 255, 255, 0.94); }
+.auth-hero-list svg { width: 18px; height: 18px; flex: none; opacity: 0.9; }
+.auth-hero-foot { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 28px;
+}
+/* The logo belongs on the form card itself, not only in the hero corner. */
+.auth-card-brand { display: inline-flex; margin-bottom: 18px; }
+.auth-card-brand .brand-mark { width: 40px; height: 40px; }
+.auth-card-brand .brand-word { font-size: 21px; }
+.auth-card-brand .brand-tag { font-size: 11px; }
+.auth-card h2 { font-size: 23px; margin-bottom: 4px; }
+.auth-sub { color: var(--color-muted); font-size: 13px; margin-bottom: 20px; }
+.auth-foot { text-align: center; font-size: 13px; color: var(--color-muted); margin-top: 18px; }
+
+/* password field with a show/hide toggle */
+.pw-field { position: relative; }
+.pw-field .input { padding-right: 42px; }
+.pw-toggle {
+  position: absolute;
+  right: 5px;
+  top: 8px;
+  background: none;
+  border: 0;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--color-neutral-500);
+  display: inline-flex;
+}
+.pw-toggle:hover { color: var(--color-accent); }
+.pw-toggle svg { width: 17px; height: 17px; }
+
+/* label row with a trailing link, e.g. "Forgot password?" */
+.field-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.field-head > label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 0; color: var(--color-text); }
+.field-link { font-size: 12px; color: var(--color-accent); text-decoration: none; }
+.field-link:hover { text-decoration: underline; }
+
+/* inline field-level validation */
+.field-err { color: var(--color-danger); font-size: 12px; margin-top: 4px; }
+.input.has-err,
+.input.has-err:focus { border-color: var(--color-danger); box-shadow: 0 0 0 3px #fdeaea; }
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-hero { display: none; }
+  .auth-panel { min-height: 100vh; }
+  .auth-card-brand { display: inline-flex; }
+}
+
+.form-error {
+  background: #fff0f0;
+  color: var(--color-danger);
+  border: 1px solid #f3caca;
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.field { margin-bottom: 12px; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 4px 0 12px;
+}
+.form-grid .field { margin-bottom: 0; }
+select.input { appearance: auto; background: #fff; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.chip-row .btn-ghost { padding: 4px 8px; min-height: auto; }
+.chip-row .btn svg { width: 14px; height: 14px; }
+
+
+.avatar.avatar-initials {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 850;
+  font-size: 13px;
+}
+
+/* top bar: no search — just the signed-in user, opening the account menu */
+.topbar-account { position: relative; flex: none; }
+.topbar-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--color-text);
+  padding: 3px 6px 3px 10px;
+  border-radius: var(--radius-pill);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.topbar-user:hover,
+.topbar-user[aria-expanded="true"] { background: var(--color-neutral-100); }
+.topbar-name { font-size: 13px; font-weight: 700; }
+.acct-caret {
+  width: 15px; height: 15px; flex: none; color: var(--color-muted);
+  transition: transform .16s ease;
+}
+.acct-caret.is-open { transform: rotate(180deg); }
+
+/* the menu itself — same surface as the custom select's listbox */
+.acct-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
+  min-width: 210px; padding: 6px;
+  background: #fff; border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  animation: sel-in .13s ease-out;
+}
+@media (prefers-reduced-motion: reduce) { .acct-menu { animation: none; } }
+.acct-head {
+  display: flex; flex-direction: column; line-height: 1.25;
+  padding: 8px 10px 10px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.acct-head strong {
+  font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.acct-head small { font-size: 11.5px; color: var(--color-muted); }
+.acct-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 9px 10px; border: 0; border-radius: 9px;
+  background: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--color-text);
+}
+.acct-item svg { flex: none; width: 15px; height: 15px; color: var(--color-muted); }
+.acct-item:hover, .acct-item:focus-visible { background: var(--color-neutral-100); }
+.acct-item.is-danger { color: var(--color-danger); }
+.acct-item.is-danger svg { color: var(--color-danger); }
+.acct-item.is-danger:hover, .acct-item.is-danger:focus-visible { background: #fdf0f0; }
+/* The sidebar carries the brand on desktop. Below 900px it's off-canvas, so
+   without this the logo is invisible until you open the menu.
+   Both halves live here: extra.css loads after app.css, so a base rule here
+   would override a media-query override there. */
+.topbar-brand { display: none; }
+@media (max-width: 900px) {
+  .topbar-brand { display: inline-flex; }
+}
+@media (max-width: 560px) {
+  .topbar-name { display: none; }
+}
+
+.table .plain { color: var(--color-text); text-decoration: none; }
+.table .plain:hover { color: var(--color-accent); }
+

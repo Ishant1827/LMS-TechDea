@@ -1,0 +1,25 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   Stylesheet entry point. main.jsx imports this file and nothing else.
+
+   ORDER IS SIGNIFICANT — these sheets are plain global CSS and later rules are
+   expected to win over earlier ones. The sequence below is the exact order the
+   rules appeared in before they were split out of the old `extra.css`, so the
+   cascade is unchanged. Add new feature sheets at the end.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* foundations */
+@import "./design-system.css";   /* tokens + base component classes */
+@import "./app-shell.css";       /* sidebar, top bar, page frame, loaders */
+
+/* features, in cascade order */
+@import "./auth.css";
+@import "./tables.css";
+@import "./lesson-content.css";
+@import "./dashboard.css";
+@import "./assessments.css";
+@import "./confirm-dialog.css";
+@import "./submission-review.css";
+@import "./responsive.css";
+@import "./select.css";
+@import "./dashboard-widgets.css";
+@import "./profile.css";

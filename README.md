@@ -3,17 +3,121 @@
 Student learning platform — **React + Express + MongoDB + Node**. Three roles:
 **student**, **teacher**, **admin**. Visual design matched to
 [learn.techdea.in](https://learn.techdea.in/) (the design system lives in
-`client/src/styles/` — `techdea.css` tokens/components + `app.css` portal shell).
+`client/src/styles/` — `design-system.css` tokens/components + `app-shell.css` portal shell).
 
 Lessons come in three types — **video**, **reading**, **file**. Media is **not**
 hosted here: a video lesson holds an embed/watch URL (YouTube/Vimeo/…), a file
 lesson holds a link + display name, and the player renders accordingly.
 
 ```
-server/   Express API + Mongoose models        (port 5000)
-client/   React app (Vite)                      (port 5173, proxies /api → 5000)
-styles/   original design-system source (also copied into client/src/styles)
+server/   Express API + Mongoose models   (port 5000)
+client/   React app (Vite)                (port 5173, proxies /api → 5000)
+docs/     audit PDF, security baseline, archived reference material
 ```
+
+## Project structure
+
+Both halves are grouped **by feature**, not by technical layer, and both use the
+same vocabulary: a `<feature>` folder owns its own screens and logic, and
+`shared/` holds what more than one feature needs. To change a screen, open the
+folder named after it — everything that screen owns is inside.
+
+### `server/` — Express API
+
+Each folder under `modules/` is one slice of the domain and holds its **routes,
+controller and Mongoose model together**.
+
+```
+server/
+├── scripts/seed.js                 demo admin + teacher + courses
+└── src/
+    ├── index.js                    process bootstrap (env, DB, listen)
+    ├── app.js                      express wiring + route mounts  ← start here
+    ├── config/db.js                Mongoose connection
+    ├── shared/                     cross-cutting; modules import from here
+    │   ├── middleware/             auth (protect/requireRole), error, rateLimit
+    │   └── utils/                  asyncHandler, constants, token, url
+    └── modules/
+        ├── auth/                   auth.routes.js · auth.controller.js
+        ├── users/                  + User.model.js          → /api/users
+        ├── courses/                + Course.model.js        → /api/courses
+        ├── lessons/                + Lesson.model.js        → nested under courses
+        ├── reviews/                review.controller.js + Review.model.js
+        │                           (no routes file — mounted by courses)
+        ├── enrollments/            + Enrollment.model.js    → /api/enrollments
+        ├── assessments/            + Assessment.model.js    → /api/assessments
+        ├── submissions/            + Submission.model.js    → /api/submissions
+        ├── doubts/                 + Doubt.model.js         → /api/doubts
+        └── students/               roster endpoint          → /api/students
+```
+
+Naming is consistent: `<feature>.routes.js`, `<feature>.controller.js`,
+`<Entity>.model.js`. Dependencies point one way — `modules/` may import from
+`shared/` and `config/`, never the reverse.
+
+### `client/` — React SPA
+
+Pages are grouped by **who uses them**, which is the same split the router and
+`ProtectedRoute` already enforce.
+
+```
+client/src/
+├── app/                    App.jsx (the route table), main.jsx, NotFound.jsx
+├── features/
+│   ├── auth/               Login, Signup, ForgotPassword + AuthContext,
+│   │                       AuthLayout, ProtectedRoute
+│   ├── student/pages/      Dashboard, Catalog, CourseDetails, MyLearning,
+│   │                       LessonPlayer, ProgressPage, StudentAssignments,
+│   │                       AssessmentDetail, StudentDoubts
+│   ├── teacher/            TeacherDashboard, ManageCourses, CourseEditor,
+│   │                       CourseEnrollments, TeacherStudents,
+│   │                       TeacherAssignments, TeacherDoubts,
+│   │                       TeacherPerformance + CoursePreview
+│   ├── admin/pages/        AdminUsers
+│   └── account/pages/      Profile  (shared by every signed-in role)
+├── shared/
+│   ├── api/client.js       axios instance, token header, 401 handling
+│   ├── components/
+│   │   ├── ui/             Bar, Ring, Stat, Loaders, CourseThumb,
+│   │   │                   VideoPlaceholder (via index.js barrel);
+│   │   │                   Modal, Select, Stars, PasswordInput
+│   │   ├── layout/         Layout (sidebar + top bar), AccountMenu, Brand
+│   │   └── lesson/         LessonContent, FileViewer
+│   ├── context/            ToastContext, ConfirmContext
+│   ├── hooks/              useMediaQuery
+│   └── lib/                assessments, fileKind, format, image,
+│                           lessonTypes, roles, safeUrl
+└── styles/                 index.css imports the rest — see below
+```
+
+**Imports use the `@` alias** for `client/src`, so a path never changes when a
+file moves depth:
+
+```js
+import Layout from "@/shared/components/layout/Layout";
+import { CenterLoader } from "@/shared/components/ui";
+```
+
+It is configured in `vite.config.js` (`resolve.alias`) and `jsconfig.json`
+(for editor go-to-definition). Only same-folder imports stay relative.
+
+### Styles
+
+Global CSS, loaded by one entry point. `main.jsx` imports **only**
+`@/styles/index.css`, which `@import`s the rest:
+
+```
+client/src/styles/
+├── index.css               the entry — ORDER MATTERS, see the note inside
+├── design-system.css       tokens + base classes (.btn, .card, .tag, .table…)
+├── app-shell.css           sidebar, top bar, page frame, loaders
+└── auth · tables · lesson-content · dashboard · assessments · confirm-dialog
+    submission-review · responsive · select · dashboard-widgets · profile
+```
+
+These are plain global sheets where later rules are meant to beat earlier ones,
+so `index.css` keeps them in a fixed order. **Add new feature sheets at the
+end**, and add the `@import` rather than importing CSS from a component.
 
 ## Prerequisites
 
@@ -36,6 +140,17 @@ npm run dev                 # http://localhost:5000
 cd client
 npm install
 npm run dev                 # http://localhost:5173
+```
+
+The repo root also has shortcuts so you can stay in one directory (they just
+delegate to the two packages — there is nothing to `npm install` at the root):
+
+```bash
+npm run install:all   # npm install in both client and server
+npm run dev:api       # = npm --prefix server run dev
+npm run dev:web       # = npm --prefix client run dev
+npm run seed          # = npm --prefix server run seed
+npm run build         # = npm --prefix client run build
 ```
 
 Open http://localhost:5173.

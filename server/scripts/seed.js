@@ -3,10 +3,10 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const connectDB = require("../src/config/db");
-const User = require("../src/models/User");
-const Course = require("../src/models/Course");
-const Lesson = require("../src/models/Lesson");
-const Assessment = require("../src/models/Assessment");
+const User = require("../src/modules/users/User.model");
+const Course = require("../src/modules/courses/Course.model");
+const Lesson = require("../src/modules/lessons/Lesson.model");
+const Assessment = require("../src/modules/assessments/Assessment.model");
 
 async function upsertUser({ email, name, role, password }) {
   let user = await User.findOne({ email: email.toLowerCase() });

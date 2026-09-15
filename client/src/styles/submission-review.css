@@ -1,0 +1,12 @@
+/* Teacher-side quiz answer review inside the submissions inbox */
+
+/* ── teacher-side quiz answer review (submissions inbox) ──────────────────── */
+.qz-review { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.qz-review > li { border-left: 2px solid var(--color-divider); padding-left: 10px; }
+.qz-review-q { font-size: 13px; font-weight: 650; margin-bottom: 3px; }
+.qz-review-a { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.qz-review-a svg { width: 14px; height: 14px; flex: none; }
+.qz-review-a.is-right { color: var(--color-success); }
+.qz-review-a.is-wrong { color: var(--color-danger); }
+.qz-review-key { font-size: 12px; color: var(--color-muted); margin-top: 2px; }
+

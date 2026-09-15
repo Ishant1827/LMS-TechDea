@@ -1,0 +1,180 @@
+/* Student dashboard — continue-learning, course rails and section layout */
+
+/* ── student dashboard ─────────────────────────────────────────────────── */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
+}
+/* Four across needs ~200px per tile once the icon chip is in; below that the
+   labels start truncating, so drop to two. */
+@media (max-width: 1130px) {
+  .stat-strip { grid-template-columns: repeat(2, 1fr); }
+}
+.stat-strip .stat .card-title { font-size: 22px; }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.dash-sub {
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 800;
+  font-size: 10px;
+  margin: 10px 0 6px;
+}
+.mini-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+/* horizontal scroller (discover strip) */
+.hscroll {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+}
+.hscroll > * { scroll-snap-align: start; }
+.mini-course {
+  width: 210px;
+  flex: none;
+  gap: 6px;
+}
+
+@media (max-width: 900px) {
+  .stat-strip { grid-template-columns: repeat(2, 1fr); }
+  .dash-grid { grid-template-columns: 1fr; }
+}
+
+/* catalog filters + pagination */
+.filter-bar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.filter-bar .input { min-height: 40px; }
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+/* star rating */
+.stars { display: inline-flex; gap: 2px; line-height: 0; }
+.stars svg { width: 14px; height: 14px; color: var(--color-neutral-400); fill: none; }
+.stars .on svg { color: #f5a524; fill: #f5a524; }
+.stars--input button {
+  background: none;
+  border: 0;
+  padding: 0 1px;
+  cursor: pointer;
+  color: var(--color-neutral-400);
+  line-height: 0;
+}
+.stars--input button.on svg,
+.stars--input button:hover svg { color: #f5a524; fill: #f5a524; }
+
+/* lesson notes */
+.notes-block {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-divider);
+  max-width: none;
+}
+.notes-block textarea { resize: vertical; }
+.note-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+.note-status svg { width: 13px; height: 13px; }
+.note-status.is-unsaved { color: var(--color-neutral-500); }
+.note-foot {
+  margin-top: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* modal (portalled to <body>) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(23, 17, 38, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  padding: 32px 16px;
+  overflow-y: auto;
+}
+.modal {
+  width: min(560px, 100%);
+  margin: auto; /* centres when it fits, aligns to top + scrolls when taller */
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+}
+.modal--wide { width: min(880px, 100%); }
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.modal-head h4 { font-size: 16px; line-height: 1.3; }
+.modal-body { min-height: 0; }
+
+/* course-details "preview first lesson" — keep the media at a sane size */
+.lesson-preview .video-embed {
+  max-width: 100%;
+  margin: 0 0 14px;
+}
+.lesson-preview .reading-body {
+  max-width: none;
+  margin-bottom: 0;
+  font-size: 14px;
+}
+.lesson-preview .file-viewer { margin-bottom: 0; }
+.lesson-preview .file-viewer-body iframe,
+.lesson-preview .file-viewer-body object {
+  height: 52vh;
+  min-height: 320px;
+}
+.preview-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+}
+.preview-cta .btn { margin-left: auto; }
+
+@media (max-width: 900px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .filter-bar { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .filter-bar { grid-template-columns: 1fr; }
+}
+
