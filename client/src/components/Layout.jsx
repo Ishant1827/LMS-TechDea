@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Compass,
@@ -10,34 +10,56 @@ import {
   TrendingUp,
   MessageCircleQuestion,
   BarChart3,
-  LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import AccountMenu from "./AccountMenu";
 import Brand from "./Brand";
 import { initials, cap } from "../lib/format";
 import { roleHome } from "../lib/roles";
 
-// [path, label, Icon, end?]  — Profile is reached from the top-right avatar, not here.
+// [heading, [[path, label, Icon, end?], …]]  — a null heading is the ungrouped
+// lead section. Grouping stops six or seven equal-weight links reading as one
+// undifferentiated list. Profile is reached from the top-right avatar, not here.
 const STUDENT_NAV = [
-  ["/", "Dashboard", LayoutDashboard, true],
-  ["/courses", "Browse Courses", Compass, false],
-  ["/my-learning", "My Learning", BookOpen, false],
-  ["/assignments", "Assignments & Quizzes", ClipboardList, false],
-  ["/progress", "Progress", TrendingUp, false],
-  ["/doubts", "Doubts", MessageCircleQuestion, false],
+  [null, [["/", "Dashboard", LayoutDashboard, true]]],
+  [
+    "Learn",
+    [
+      ["/courses", "Browse Courses", Compass, false],
+      ["/my-learning", "My Learning", BookOpen, false],
+      ["/assignments", "Assignments & Quizzes", ClipboardList, false],
+    ],
+  ],
+  [
+    "Track",
+    [
+      ["/progress", "Progress", TrendingUp, false],
+      ["/doubts", "Doubts", MessageCircleQuestion, false],
+    ],
+  ],
 ];
 
 const TEACHER_NAV = [
-  ["/teach", "Dashboard", LayoutDashboard, true],
-  ["/manage", "Courses", BookOpen, false],
-  ["/teach/assignments", "Assignments & Quizzes", ClipboardList, false],
-  ["/teach/students", "Students", Users, false],
-  ["/teach/doubts", "Doubts", MessageCircleQuestion, false],
-  ["/teach/performance", "Performance", BarChart3, false],
+  [null, [["/teach", "Dashboard", LayoutDashboard, true]]],
+  [
+    "Teach",
+    [
+      ["/manage", "Courses", BookOpen, false],
+      ["/teach/assignments", "Assignments & Quizzes", ClipboardList, false],
+    ],
+  ],
+  [
+    "People",
+    [
+      ["/teach/students", "Students", Users, false],
+      ["/teach/doubts", "Doubts", MessageCircleQuestion, false],
+    ],
+  ],
+  ["Insights", [["/teach/performance", "Performance", BarChart3, false]]],
 ];
 
 // Admin = teacher workspace + admin-only sections.
-const ADMIN_EXTRA = [["/admin/users", "Users", Users, false]];
+const ADMIN_EXTRA = [["Admin", [["/admin/users", "Users", Users, false]]]];
 
 function navForRole(role) {
   if (role === "student") return STUDENT_NAV;
@@ -46,16 +68,10 @@ function navForRole(role) {
 }
 
 export default function Layout({ children, bodyClass = "" }) {
-  const { user, logout } = useAuth();
-  const nav = useNavigate();
+  const { user } = useAuth();
   const [drawer, setDrawer] = useState(false);
 
-  const items = navForRole(user.role);
-
-  const signOut = () => {
-    logout();
-    nav("/login", { replace: true });
-  };
+  const groups = navForRole(user.role);
 
   return (
     <div className="app">
@@ -64,6 +80,27 @@ export default function Layout({ children, bodyClass = "" }) {
           <Brand />
         </Link>
 
+        {groups.map(([heading, links]) => (
+          <div className="sb-group" key={heading || "main"}>
+            {heading && <div className="sb-group-h">{heading}</div>}
+            {links.map(([to, label, Icon, end]) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={() => setDrawer(false)}
+                className={({ isActive }) => (isActive ? "on" : undefined)}
+              >
+                <Icon />
+                {label}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+
+        {/* Pinned to the bottom: it fills the gap left when Sign out moved to
+            the account menu, and reads as a footer rather than competing with
+            the brand for the top of the panel. */}
         <div className="sb-user">
           <div className="avatar avatar-initials">{initials(user.name)}</div>
           <div>
@@ -71,24 +108,6 @@ export default function Layout({ children, bodyClass = "" }) {
             <small>{cap(user.role)}</small>
           </div>
         </div>
-
-        {items.map(([to, label, Icon, end]) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            onClick={() => setDrawer(false)}
-            className={({ isActive }) => (isActive ? "on" : undefined)}
-          >
-            <Icon />
-            {label}
-          </NavLink>
-        ))}
-
-        <button className="sb-logout" onClick={signOut}>
-          <LogOut />
-          Sign out
-        </button>
       </nav>
 
       <div className={"scrim" + (drawer ? " show" : "")} onClick={() => setDrawer(false)} />
@@ -108,10 +127,7 @@ export default function Layout({ children, bodyClass = "" }) {
             <Brand size={28} tagline={false} />
           </Link>
           <span className="spacer" />
-          <Link className="topbar-user" to="/profile" title={user.name}>
-            <span className="topbar-name">{user.name}</span>
-            <div className="avatar avatar-initials">{initials(user.name)}</div>
-          </Link>
+          <AccountMenu />
         </header>
         <main className={"body " + bodyClass}>{children}</main>
       </div>

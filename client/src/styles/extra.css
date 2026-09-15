@@ -112,25 +112,6 @@ select.input { appearance: auto; background: #fff; }
 .chip-row .btn-ghost { padding: 4px 8px; min-height: auto; }
 .chip-row .btn svg { width: 14px; height: 14px; }
 
-/* sidebar sign-out button — matches the nav links above it */
-.sidebar .sb-logout {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #9990a9;
-  background: none;
-  border: 0;
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-}
-.sidebar .sb-logout:hover { background: #2a1e3e; color: #fff; }
-.sidebar .sb-logout svg { width: 16px; height: 16px; flex: none; }
 
 .avatar.avatar-initials {
   display: grid;
@@ -140,18 +121,59 @@ select.input { appearance: auto; background: #fff; }
   font-size: 13px;
 }
 
-/* top bar: no search — just the signed-in user, linking to Profile */
+/* top bar: no search — just the signed-in user, opening the account menu */
+.topbar-account { position: relative; flex: none; }
 .topbar-user {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
   color: var(--color-text);
-  padding: 3px 4px 3px 10px;
+  padding: 3px 6px 3px 10px;
   border-radius: var(--radius-pill);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
 }
-.topbar-user:hover { background: var(--color-neutral-100); }
+.topbar-user:hover,
+.topbar-user[aria-expanded="true"] { background: var(--color-neutral-100); }
 .topbar-name { font-size: 13px; font-weight: 700; }
+.acct-caret {
+  width: 15px; height: 15px; flex: none; color: var(--color-muted);
+  transition: transform .16s ease;
+}
+.acct-caret.is-open { transform: rotate(180deg); }
+
+/* the menu itself — same surface as the custom select's listbox */
+.acct-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
+  min-width: 210px; padding: 6px;
+  background: #fff; border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  animation: sel-in .13s ease-out;
+}
+@media (prefers-reduced-motion: reduce) { .acct-menu { animation: none; } }
+.acct-head {
+  display: flex; flex-direction: column; line-height: 1.25;
+  padding: 8px 10px 10px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.acct-head strong {
+  font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.acct-head small { font-size: 11.5px; color: var(--color-muted); }
+.acct-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 9px 10px; border: 0; border-radius: 9px;
+  background: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--color-text);
+}
+.acct-item svg { flex: none; width: 15px; height: 15px; color: var(--color-muted); }
+.acct-item:hover, .acct-item:focus-visible { background: var(--color-neutral-100); }
+.acct-item.is-danger { color: var(--color-danger); }
+.acct-item.is-danger svg { color: var(--color-danger); }
+.acct-item.is-danger:hover, .acct-item.is-danger:focus-visible { background: #fdf0f0; }
 /* The sidebar carries the brand on desktop. Below 900px it's off-canvas, so
    without this the logo is invisible until you open the menu.
    Both halves live here: extra.css loads after app.css, so a base rule here
@@ -1153,4 +1175,28 @@ select.input { appearance: auto; background: #fff; }
   .stat-value { font-size: 22px; }
   .stat-label { white-space: normal; overflow: visible; }
   .stat-hint { white-space: normal; overflow: visible; }
+}
+
+/* ── profile ──────────────────────────────────────────────────────────────
+   Account settings as a stack of cards, so the two forms read as separate
+   jobs — editing your details, and changing your password. */
+.profile-wrap {
+  display: flex; flex-direction: column; gap: 16px; max-width: 560px;
+}
+.profile-head {
+  flex-direction: row; align-items: center; gap: 14px; padding: 16px;
+}
+.profile-avatar { width: 56px; height: 56px; font-size: 17px; }
+.profile-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.profile-id h4 { margin: 0; }
+.profile-id .muted-sm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.form-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px;
+}
+/* the save state sits with the buttons, not under them */
+.form-actions .muted-sm { margin-left: auto; }
+
+@media (max-width: 470px) {
+  .form-actions .muted-sm { margin-left: 0; width: 100%; }
 }

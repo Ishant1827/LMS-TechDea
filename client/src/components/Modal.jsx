@@ -10,10 +10,23 @@ export default function Modal({ title, onClose, children, wide = false }) {
   const dialogRef = useRef(null);
   const restoreRef = useRef(null);
 
-  useEffect(() => {
-    // remember where focus came from so we can hand it back on close
-    restoreRef.current = document.activeElement;
+  // Every caller passes an inline arrow for onClose, so it's a new function on
+  // each render. Read it through a ref instead of depending on it, or the
+  // effect below tears down and re-runs on every ancestor re-render — which
+  // would yank focus back to the first field (a toast alone is enough to
+  // trigger it) and leave restoreRef pointing at a node inside the dialog.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
+  // Remember where focus came from, captured on the first render. This can't
+  // wait for the effect below: React honours autoFocus (several dialogs use it
+  // on their first field) during the commit, before passive effects run, so by
+  // then document.activeElement is already inside the dialog — capturing there
+  // hands focus back to a node that no longer exists, dropping the user on
+  // <body> when the dialog closes.
+  if (restoreRef.current === null) restoreRef.current = document.activeElement;
+
+  useEffect(() => {
     const dialog = dialogRef.current;
     const focusables = () => Array.from(dialog?.querySelectorAll(FOCUSABLE) || []);
 
@@ -22,7 +35,7 @@ export default function Modal({ title, onClose, children, wide = false }) {
     (first || dialog)?.focus();
 
     const onKey = (e) => {
-      if (e.key === "Escape") return onClose();
+      if (e.key === "Escape") return closeRef.current();
       if (e.key !== "Tab") return;
       // keep Tab inside the dialog
       const items = focusables();
@@ -47,9 +60,13 @@ export default function Modal({ title, onClose, children, wide = false }) {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
-      restoreRef.current?.focus?.();
+      // only if it's still in the document — the opener can be gone by now
+      const back = restoreRef.current;
+      if (back?.isConnected) back.focus?.();
     };
-  }, [onClose]);
+    // mount/unmount only — see closeRef above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={onClose}>

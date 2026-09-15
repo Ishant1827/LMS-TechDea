@@ -3,48 +3,130 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import api from "../api/client";
 import Layout from "../components/Layout";
+import PasswordInput from "../components/PasswordInput";
 import { roleHome } from "../lib/roles";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { initials, cap } from "../lib/format";
+
+const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
 
 export default function Profile() {
   const { user, patchUser } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
   const goBack = () => (window.history.length > 1 ? nav(-1) : nav(roleHome(user.role)));
+
   const [p, setP] = useState({ name: user.name, email: user.email, phone: user.phone || "" });
-  const [pw, setPw] = useState({ currentPassword: "", newPassword: "" });
+  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirm: "" });
+  const [pwTouched, setPwTouched] = useState({});
+  const [pwSubmitted, setPwSubmitted] = useState(false);
+  const [pwErr, setPwErr] = useState("");
   const [busyPw, setBusyPw] = useState(false);
+
+  // Inline validation, the same shape as the sign-up form: a field only shows
+  // its error once it has been left or the form has been submitted.
+  const errors = {
+    name: !p.name.trim()
+      ? "Your name is required"
+      : p.name.trim().length < 2
+      ? "That name looks too short"
+      : "",
+    email: !p.email.trim() ? "Email is required" : !emailOk(p.email) ? "Enter a valid email" : "",
+    phone: phoneOk(p.phone) ? "" : "Enter a valid phone number",
+  };
+  const showErr = (k) => (touched[k] || submitted) && errors[k];
+
+  const pwErrors = {
+    currentPassword: pw.currentPassword ? "" : "Enter your current password",
+    newPassword: !pw.newPassword
+      ? "Choose a new password"
+      : pw.newPassword.length < 6
+      ? "At least 6 characters"
+      : pw.newPassword === pw.currentPassword
+      ? "Pick something different from your current password"
+      : "",
+    confirm: !pw.confirm
+      ? "Re-enter your new password"
+      : pw.confirm !== pw.newPassword
+      ? "Passwords don't match"
+      : "",
+  };
+  const showPwErr = (k) => (pwTouched[k] || pwSubmitted) && pwErrors[k];
+
+  const set = (k) => (e) => {
+    setP({ ...p, [k]: e.target.value });
+    setErr("");
+  };
+  const blur = (k) => () => setTouched((t) => ({ ...t, [k]: true }));
+
+  const setPwField = (k) => (e) => {
+    setPw({ ...pw, [k]: e.target.value });
+    setPwErr("");
+  };
+  const blurPw = (k) => () => setPwTouched((t) => ({ ...t, [k]: true }));
+
+  // Nothing to save until something actually differs from the stored account.
+  const dirty =
+    p.name.trim() !== user.name ||
+    p.email.trim() !== user.email ||
+    p.phone.trim() !== (user.phone || "");
 
   const save = async (e) => {
     e.preventDefault();
-    if (!p.name.trim()) return toast("Your name can't be empty");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email.trim())) return toast("Enter a valid email");
+    setSubmitted(true);
+    setErr("");
+    if (Object.values(errors).some(Boolean)) return;
     setBusy(true);
     try {
-      const { data } = await api.put("/auth/me", p);
+      const { data } = await api.put("/auth/me", {
+        name: p.name.trim(),
+        email: p.email.trim(),
+        phone: p.phone.trim(),
+      });
       patchUser(data.user);
       // re-seed the form from the server so the fields can never drift from
       // what was actually stored
       setP({ name: data.user.name, email: data.user.email, phone: data.user.phone || "" });
+      setTouched({});
+      setSubmitted(false);
       toast("Changes saved");
     } catch (e) {
-      toast(e.message);
+      setErr(e.message);
     }
     setBusy(false);
   };
 
+  const reset = () => {
+    setP({ name: user.name, email: user.email, phone: user.phone || "" });
+    setTouched({});
+    setSubmitted(false);
+    setErr("");
+  };
+
   const changePw = async (e) => {
     e.preventDefault();
+    setPwSubmitted(true);
+    setPwErr("");
+    if (Object.values(pwErrors).some(Boolean)) return;
     setBusyPw(true);
     try {
-      await api.put("/auth/me/password", pw);
-      setPw({ currentPassword: "", newPassword: "" });
+      await api.put("/auth/me/password", {
+        currentPassword: pw.currentPassword,
+        newPassword: pw.newPassword,
+      });
+      setPw({ currentPassword: "", newPassword: "", confirm: "" });
+      setPwTouched({});
+      setPwSubmitted(false);
       toast("Password updated");
     } catch (e) {
-      toast(e.message);
+      setPwErr(e.message);
     }
     setBusyPw(false);
   };
@@ -55,79 +137,147 @@ export default function Profile() {
         <ArrowLeft />
         Back
       </button>
-      <h4 className="page-title">Profile</h4>
-      <div style={{ maxWidth: 420 }}>
-        <div className="row" style={{ marginBottom: 20 }}>
-          <div
-            className="avatar avatar-initials"
-            style={{ width: 72, height: 72, fontSize: 20 }}
-          >
-            {initials(user.name)}
+      <h2 className="page-title">Profile</h2>
+
+      <div className="profile-wrap">
+        <div className="profile-head card elev-sm">
+          <div className="avatar avatar-initials profile-avatar">{initials(user.name)}</div>
+          <div className="profile-id">
+            <h4>{user.name}</h4>
+            <span className="muted-sm">{user.email}</span>
           </div>
-          <div>
-            <h4 style={{ marginBottom: 2 }}>{user.name}</h4>
-            <span className="text-muted" style={{ fontSize: 13 }}>
-              {cap(user.role)}
-            </span>
-          </div>
+          <span className="tag tag-neutral">{cap(user.role)}</span>
         </div>
 
-        <form onSubmit={save}>
+        <form onSubmit={save} className="card elev-sm" noValidate>
+          <div className="card-kicker">Your details</div>
+
+          {err && <div className="form-error">{err}</div>}
+
           <div className="field">
-            <label>Full Name</label>
+            <label htmlFor="pf-name">Full name</label>
             <input
-              className="input"
+              id="pf-name"
+              className={"input" + (showErr("name") ? " has-err" : "")}
+              autoComplete="name"
               value={p.name}
-              onChange={(e) => setP({ ...p, name: e.target.value })}
+              onChange={set("name")}
+              onBlur={blur("name")}
             />
+            {showErr("name") && <div className="field-err">{errors.name}</div>}
           </div>
+
           <div className="field">
-            <label>Email</label>
+            <label htmlFor="pf-email">Email</label>
             <input
-              className="input"
+              id="pf-email"
+              className={"input" + (showErr("email") ? " has-err" : "")}
               type="email"
+              autoComplete="email"
               value={p.email}
-              onChange={(e) => setP({ ...p, email: e.target.value })}
+              onChange={set("email")}
+              onBlur={blur("email")}
             />
+            {showErr("email") ? (
+              <div className="field-err">{errors.email}</div>
+            ) : (
+              <div className="muted-sm" style={{ marginTop: 4 }}>
+                You log in with this address.
+              </div>
+            )}
           </div>
-          <div className="field" style={{ marginBottom: 18 }}>
-            <label>Phone</label>
+
+          <div className="field">
+            <label htmlFor="pf-phone">Phone</label>
             <input
-              className="input"
+              id="pf-phone"
+              className={"input" + (showErr("phone") ? " has-err" : "")}
+              type="tel"
+              autoComplete="tel"
+              placeholder="Optional"
               value={p.phone}
-              onChange={(e) => setP({ ...p, phone: e.target.value })}
+              onChange={set("phone")}
+              onBlur={blur("phone")}
             />
+            {showErr("phone") && <div className="field-err">{errors.phone}</div>}
           </div>
-          <button className={"btn btn-primary" + (busy ? " is-loading" : "")}>Save Changes</button>
+
+          <div className="form-actions">
+            <button
+              className={"btn btn-primary" + (busy ? " is-loading" : "")}
+              disabled={busy || !dirty}
+            >
+              Save changes
+            </button>
+            {dirty && !busy && (
+              <button type="button" className="btn btn-ghost" onClick={reset}>
+                Discard
+              </button>
+            )}
+            <span className="muted-sm">{dirty ? "Unsaved changes" : "Everything saved"}</span>
+          </div>
         </form>
 
-        <div className="hr" />
-        <h5 className="section-h">Change Password</h5>
-        <form onSubmit={changePw}>
+        <form onSubmit={changePw} className="card elev-sm" noValidate>
+          <div className="card-kicker">Change password</div>
+
+          {pwErr && <div className="form-error">{pwErr}</div>}
+
           <div className="field">
-            <label>Current Password</label>
-            <input
-              className="input"
-              type="password"
-              required
+            <label htmlFor="pf-current">Current password</label>
+            <PasswordInput
+              id="pf-current"
+              className={showPwErr("currentPassword") ? "has-err" : ""}
+              autoComplete="current-password"
               value={pw.currentPassword}
-              onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })}
+              onChange={setPwField("currentPassword")}
+              onBlur={blurPw("currentPassword")}
             />
+            {showPwErr("currentPassword") && (
+              <div className="field-err">{pwErrors.currentPassword}</div>
+            )}
           </div>
-          <div className="field" style={{ marginBottom: 16 }}>
-            <label>New Password</label>
-            <input
-              className="input"
-              type="password"
-              required
-              minLength={6}
+
+          <div className="field">
+            <label htmlFor="pf-new">New password</label>
+            <PasswordInput
+              id="pf-new"
+              className={showPwErr("newPassword") ? "has-err" : ""}
+              autoComplete="new-password"
               value={pw.newPassword}
-              onChange={(e) => setPw({ ...pw, newPassword: e.target.value })}
+              onChange={setPwField("newPassword")}
+              onBlur={blurPw("newPassword")}
             />
+            {showPwErr("newPassword") ? (
+              <div className="field-err">{pwErrors.newPassword}</div>
+            ) : (
+              <div className="muted-sm" style={{ marginTop: 4 }}>
+                At least 6 characters.
+              </div>
+            )}
           </div>
-          <button className={"btn btn-secondary" + (busyPw ? " is-loading" : "")}>
-            Update Password
-          </button>
+
+          <div className="field">
+            <label htmlFor="pf-confirm">Confirm new password</label>
+            <PasswordInput
+              id="pf-confirm"
+              className={showPwErr("confirm") ? "has-err" : ""}
+              autoComplete="new-password"
+              value={pw.confirm}
+              onChange={setPwField("confirm")}
+              onBlur={blurPw("confirm")}
+            />
+            {showPwErr("confirm") && <div className="field-err">{pwErrors.confirm}</div>}
+          </div>
+
+          <div className="form-actions">
+            <button
+              className={"btn btn-secondary" + (busyPw ? " is-loading" : "")}
+              disabled={busyPw}
+            >
+              Update password
+            </button>
+          </div>
         </form>
       </div>
     </Layout>

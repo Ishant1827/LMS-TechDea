@@ -38,13 +38,19 @@ export default function Catalog() {
   }, []);
 
   useEffect(() => {
+    // the debounce doesn't stop a request already in flight, so an earlier
+    // slow response could land after a newer one and show stale results
+    let cancelled = false;
     const t = setTimeout(() => {
       api
         .get("/courses", { params: { q, category, difficulty, sort, page, limit: 12 } })
-        .then((r) => setData(r.data))
-        .catch(() => setData({ courses: [], total: 0, page: 1, pages: 1, categories: [] }));
+        .then((r) => !cancelled && setData(r.data))
+        .catch(() => !cancelled && setData({ courses: [], total: 0, page: 1, pages: 1, categories: [] }));
     }, 250);
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [q, category, difficulty, sort, page]);
 
   const enroll = async (id) => {
