@@ -12,7 +12,8 @@ exports.list = asyncHandler(async (req, res) => {
     const rx = new RegExp(String(req.query.q).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
     filter.$or = [{ name: rx }, { email: rx }];
   }
-  const users = await User.find(filter).sort({ createdAt: -1 }).lean();
+  // .lean() skips the User toJSON that strips passwordHash, so exclude it here.
+  const users = await User.find(filter).select("-passwordHash").sort({ createdAt: -1 }).lean();
 
   // attach a course count for teachers/admins
   const staffIds = users.filter((u) => u.role !== "student").map((u) => u._id);

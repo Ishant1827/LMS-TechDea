@@ -7,6 +7,7 @@ import { CenterLoader } from "../components/Bits";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { kindMeta, fmtDateTime } from "../lib/assessments";
+import { safeUrl } from "../lib/safeUrl";
 
 const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
 
@@ -342,10 +343,10 @@ export default function AssessmentDetail() {
               {sub.text || "No written answer"}
             </div>
           </div>
-          {sub.link && (
+          {safeUrl(sub.link) && (
             <p style={{ fontSize: 13 }}>
               Link:{" "}
-              <a href={sub.link} target="_blank" rel="noreferrer">
+              <a href={safeUrl(sub.link)} target="_blank" rel="noreferrer">
                 {sub.link}
               </a>
             </p>

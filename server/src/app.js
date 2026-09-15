@@ -4,6 +4,10 @@ const { notFound, errorHandler } = require("./middleware/error");
 
 const app = express();
 
+// Render terminates TLS at its proxy; without this req.ip is the proxy's
+// address and every user looks like one client to the rate limiters.
+app.set("trust proxy", 1);
+
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || true, credentials: true }));
 app.use(express.json({ limit: "3mb" })); // room for base64 course thumbnails
 

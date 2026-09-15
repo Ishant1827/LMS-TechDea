@@ -125,6 +125,11 @@ export default function Select({
     }
   };
 
+  // Focus stays on the trigger while the list is open, so the active option
+  // has to be pointed at from there. On the listbox it announces nothing,
+  // because nothing inside the listbox is ever focused.
+  const activeDescendant = open ? `${listId}-${active}` : undefined;
+
   return (
     <>
       <button
@@ -140,6 +145,7 @@ export default function Select({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        aria-activedescendant={activeDescendant}
         aria-label={ariaLabel}
       >
         <span className={"sel-value" + (selected ? "" : " is-placeholder")}>
@@ -156,7 +162,6 @@ export default function Select({
             id={listId}
             className="sel-list elev-lg"
             role="listbox"
-            aria-activedescendant={`${listId}-${active}`}
             style={{
               position: "fixed",
               left: pos.left,

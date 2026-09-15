@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Download, FileText, Image as ImageIcon, FileSpreadsheet } from "lucide-react";
 import { resolveAttachment, fileExt, officeEmbedUrl } from "../lib/fileKind";
+import { safeUrl } from "../lib/safeUrl";
 
 function DownloadButton({ url, name, secondary }) {
+  url = safeUrl(url);
+  if (!url) return null;
   return (
     <a
       className={"btn " + (secondary ? "btn-secondary" : "btn-primary")}
@@ -24,6 +27,7 @@ function DownloadButton({ url, name, secondary }) {
 export default function FileViewer({ url, name }) {
   const [imgBroken, setImgBroken] = useState(false);
 
+  url = safeUrl(url); // a non-http(s) attachment is treated as no attachment
   if (!url) {
     return (
       <p className="text-muted" style={{ marginBottom: 18 }}>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import api from "../api/client";
+import api, { AUTH_EXPIRED } from "../api/client";
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -34,6 +34,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     loadMe();
   }, [loadMe]);
+
+  // The token stopped being accepted. Drop the session; ProtectedRoute then
+  // sends us to /login and remembers where we were.
+  useEffect(() => {
+    const onExpired = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener(AUTH_EXPIRED, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED, onExpired);
+  }, []);
 
   const login = async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });

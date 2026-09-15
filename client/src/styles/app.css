@@ -55,9 +55,12 @@ body { margin: 0; background: var(--color-bg); color: var(--color-text);
 .sidebar .brand-word span { color: var(--color-accent-400); }
 .sidebar .brand-tag { color: #8f879d; }
 
+/* pinned to the bottom of the panel, below the nav groups */
 .sb-user {
   display: flex; gap: 10px; align-items: center; padding: 12px 10px;
-  background: #211932; border-radius: 14px; margin-bottom: 16px;
+  background: #211932; border-radius: 14px;
+  margin-top: auto; flex: none;
+  border: 1px solid #2f2545;
 }
 .sb-user .avatar {
   width: 36px; height: 36px; border-radius: 50%; flex: none;
@@ -66,13 +69,40 @@ body { margin: 0; background: var(--color-bg); color: var(--color-text);
 }
 .sb-user strong { color: #fff; display: block; font-size: 13px; line-height: 1.2; }
 .sb-user small { color: #8f879d; font-size: 11px; }
+/* nav groups — a small heading, then its links */
+.sb-group { display: flex; flex-direction: column; gap: 2px; }
+.sb-group + .sb-group { margin-top: 16px; }
+.sb-group-h {
+  font-size: 9.5px; font-weight: 850; letter-spacing: 1.1px; text-transform: uppercase;
+  color: #6f6683; padding: 0 12px 6px;
+}
+
 .sidebar a:not(.brand) {
+  position: relative;
   display: flex; align-items: center; gap: 10px; padding: 11px 12px;
   font-size: 13px; font-weight: 700; text-decoration: none;
   color: #9990a9; border-radius: 10px;
+  transition: background .14s ease, color .14s ease;
 }
-.sidebar a.on, .sidebar a:not(.brand):hover { background: #2a1e3e; color: #fff; }
+.sidebar a:not(.brand):hover { background: #241a36; color: #e7e2ee; }
+
+/* the current page carries the brand accent — a tinted bed plus a bar on the
+   leading edge. Hover stays a plain grey wash so the two can't be confused. */
+.sidebar a.on {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.26), rgba(139, 92, 246, 0.05));
+  color: #fff;
+}
+.sidebar a.on::before {
+  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 20px; border-radius: 0 3px 3px 0;
+  background: var(--color-accent-400);
+}
+.sidebar a.on svg { color: var(--color-accent-400); }
 .sidebar a:not(.brand) svg { width: 16px; height: 16px; flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar a:not(.brand) { transition: none; }
+}
 
 /* ── Top bar ──────────────────────────────────────────────────────────────── */
 .topbar {
@@ -194,10 +224,12 @@ a.plain { color: var(--color-text); text-decoration: none; }
 /* stat cards */
 .stat .card-title { font-size: 25px; }
 
-/* toast */
+/* toast — above the modal backdrop (60), so a message raised from inside a
+   dialog isn't painted under it. The toast lives in #root and the modal is
+   portalled to <body>, so at equal z-index the modal always won. */
 .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
   background: var(--color-neutral-900); color: #fff; padding: 11px 18px; font-size: 13px;
-  font-weight: 600; z-index: 60; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+  font-weight: 600; z-index: 80; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
 
 /* ── Loading states ──────────────────────────────────────────────────────────
    Shimmer skeletons for route changes, a violet spinner (matching

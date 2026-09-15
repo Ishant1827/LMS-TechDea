@@ -4,6 +4,7 @@ const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const asyncHandler = require("../utils/asyncHandler");
 const { ASSESSMENT_KINDS } = require("../utils/constants");
+const { isSafeUrl, LINK_ERROR } = require("../utils/url");
 
 const canManage = (user, course) =>
   user.role === "admin" || String(course.owner) === String(user._id);
@@ -307,6 +308,8 @@ exports.submit = asyncHandler(async (req, res) => {
     const text = String(req.body.text || "").trim();
     const link = String(req.body.link || "").trim();
     if (!text && !link) return res.status(400).json({ message: "Write an answer or paste a link" });
+    // The teacher clicks this link while grading — it must not be script.
+    if (!isSafeUrl(link)) return res.status(400).json({ message: LINK_ERROR });
     doc.text = text.slice(0, 20000);
     doc.link = link.slice(0, 2000);
   } else {

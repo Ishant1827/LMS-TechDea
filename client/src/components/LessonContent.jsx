@@ -2,10 +2,13 @@ import { Download } from "lucide-react";
 import { VideoPlaceholder } from "./Bits";
 import FileViewer from "./FileViewer";
 import { toEmbedUrl } from "../lib/lessonTypes";
+import { safeUrl } from "../lib/safeUrl";
 
 function FileCard({ url, name }) {
+  const href = safeUrl(url);
+  if (!href) return null;
   return (
-    <a className="file-card" href={url} target="_blank" rel="noreferrer">
+    <a className="file-card" href={href} target="_blank" rel="noreferrer">
       <span className="file-ic">
         <Download />
       </span>

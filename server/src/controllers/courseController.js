@@ -7,6 +7,7 @@ const Submission = require("../models/Submission");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { DIFFICULTY } = require("../utils/constants");
+const { isSafeImageUrl } = require("../utils/url");
 
 const rx = (s) => new RegExp(String(s).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
@@ -162,6 +163,9 @@ exports.create = asyncHandler(async (req, res) => {
   const { title, description, teacherName, learn, hours, thumbnailUrl, category, difficulty, prerequisites, published } =
     req.body;
   if (!title) return res.status(400).json({ message: "Title is required" });
+  if (!isSafeImageUrl(thumbnailUrl)) {
+    return res.status(400).json({ message: "Cover image must be an uploaded image or an http(s) URL" });
+  }
 
   const course = await Course.create({
     title,
@@ -200,7 +204,12 @@ exports.update = asyncHandler(async (req, res) => {
       ? prerequisites.map((s) => String(s).trim()).filter(Boolean)
       : [];
   if (hours !== undefined) course.hours = Number(hours) || 0;
-  if (thumbnailUrl !== undefined) course.thumbnailUrl = thumbnailUrl;
+  if (thumbnailUrl !== undefined) {
+    if (!isSafeImageUrl(thumbnailUrl)) {
+      return res.status(400).json({ message: "Cover image must be an uploaded image or an http(s) URL" });
+    }
+    course.thumbnailUrl = thumbnailUrl;
+  }
   if (category !== undefined) course.category = String(category).trim();
   if (difficulty !== undefined) course.difficulty = DIFFICULTY.includes(difficulty) ? difficulty : "";
   await course.save();
