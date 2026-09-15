@@ -52,7 +52,12 @@ exports.teaching = asyncHandler(async (req, res) => {
 
   const filter = { course: { $in: myCourseIds } };
   if (DOUBT_STATUS.includes(req.query.status)) filter.status = req.query.status;
-  if (req.query.courseId) filter.course = req.query.courseId;
+  // Narrow within the courses you manage — never widen past them.
+  if (req.query.courseId) {
+    const asked = String(req.query.courseId);
+    if (!myCourseIds.some((id) => String(id) === asked)) return res.json({ doubts: [] });
+    filter.course = asked;
+  }
 
   const doubts = await populated(Doubt.find(filter)).lean();
   doubts.sort(byOpenThenNew);

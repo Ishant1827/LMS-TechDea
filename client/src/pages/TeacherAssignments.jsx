@@ -19,6 +19,7 @@ import Select from "../components/Select";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { kindMeta, fmtDate, fmtDateTime } from "../lib/assessments";
+import { safeUrl } from "../lib/safeUrl";
 
 const dateValue = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 const blankQuestion = () => ({ text: "", options: ["", ""], correctIndex: 0 });
@@ -369,9 +370,9 @@ function GradeRow({ a, sub, onGraded }) {
           <div className={"asmt-answer" + (sub.text ? "" : " is-empty")} style={{ marginTop: 6 }}>
             {sub.text || "No written answer"}
           </div>
-          {sub.link && (
+          {safeUrl(sub.link) && (
             <p style={{ fontSize: 13, margin: "8px 0 0" }}>
-              <a href={sub.link} target="_blank" rel="noreferrer">
+              <a href={safeUrl(sub.link)} target="_blank" rel="noreferrer">
                 {sub.link}
               </a>
             </p>

@@ -1,4 +1,5 @@
 import { Play, FileText, Download } from "lucide-react";
+import { safeUrl } from "./safeUrl";
 
 export const LESSON_TYPES = [
   { value: "video", label: "Video", Icon: Play },
@@ -21,6 +22,9 @@ export const fmtDuration = (min) => {
 // returned unchanged (assumed already embeddable), "" if unparseable.
 export function toEmbedUrl(url = "") {
   if (!url) return "";
+  // Whatever falls through the host checks below goes straight into an
+  // <iframe src>, so anything that isn't http(s) is dropped here.
+  if (!safeUrl(url)) return "";
   try {
     const u = new URL(url);
     const host = u.hostname.replace(/^www\./, "");

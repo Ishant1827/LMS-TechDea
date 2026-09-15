@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Play, BookOpen } from "lucide-react";
 import Brand from "./Brand";
+import { safeImageUrl } from "../lib/safeUrl";
 
 export function Bar({ value = 0 }) {
   const v = Math.max(0, Math.min(100, value));
@@ -41,6 +42,7 @@ export function CenterLoader({ label = "Loading…" }) {
 // URL or the image fails to load.
 export function CourseThumb({ src, height = 90, style }) {
   const [broken, setBroken] = useState(false);
+  src = safeImageUrl(src);
   if (src && !broken) {
     return (
       <img

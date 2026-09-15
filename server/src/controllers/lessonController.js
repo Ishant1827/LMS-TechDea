@@ -2,6 +2,7 @@ const Course = require("../models/Course");
 const Lesson = require("../models/Lesson");
 const asyncHandler = require("../utils/asyncHandler");
 const { LESSON_TYPES } = require("../utils/constants");
+const { isSafeUrl, LINK_ERROR } = require("../utils/url");
 
 const LESSON_FIELDS = [
   "title",
@@ -30,13 +31,22 @@ async function loadManageableCourse(req, res) {
   return course;
 }
 
+// Returns { data } on success, or { error } when a pasted link isn't usable.
 function cleanLessonInput(body) {
   const out = {};
   for (const f of LESSON_FIELDS) if (body[f] !== undefined) out[f] = body[f];
   if (out.type && !LESSON_TYPES.includes(out.type)) out.type = "reading";
   if (out.durationMin !== undefined) out.durationMin = Math.max(0, Number(out.durationMin) || 0);
   if (out.module !== undefined) out.module = String(out.module).trim() || "Introduction";
-  return out;
+
+  // These are rendered as an <iframe src> / <a href> for every student on the
+  // course, so a non-http(s) scheme would be script running in our origin.
+  for (const f of ["videoUrl", "fileUrl"]) {
+    if (out[f] === undefined) continue;
+    out[f] = String(out[f]).trim();
+    if (!isSafeUrl(out[f])) return { error: LINK_ERROR };
+  }
+  return { data: out };
 }
 
 // GET /api/courses/:courseId/lessons  (optionalAuth)
@@ -58,7 +68,8 @@ exports.create = asyncHandler(async (req, res) => {
   const course = await loadManageableCourse(req, res);
   if (!course) return;
 
-  const data = cleanLessonInput(req.body);
+  const { data, error } = cleanLessonInput(req.body);
+  if (error) return res.status(400).json({ message: error });
   if (!data.title || !String(data.title).trim()) {
     return res.status(400).json({ message: "Lesson title is required" });
   }
@@ -94,7 +105,8 @@ exports.update = asyncHandler(async (req, res) => {
   const lesson = await Lesson.findOne({ _id: req.params.lessonId, course: course._id });
   if (!lesson) return res.status(404).json({ message: "Lesson not found" });
 
-  const data = cleanLessonInput(req.body);
+  const { data, error } = cleanLessonInput(req.body);
+  if (error) return res.status(400).json({ message: error });
   Object.assign(lesson, data);
   await lesson.save();
   res.json({ lesson });
