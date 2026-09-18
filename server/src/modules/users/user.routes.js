@@ -1,12 +1,13 @@
 const router = require("express").Router();
 const c = require("./user.controller");
 const { protect, requireRole } = require("../../shared/middleware/auth");
-const { adminPasswordLimiter } = require("../../shared/middleware/rateLimit");
+const { adminPasswordLimiter, bulkImportLimiter } = require("../../shared/middleware/rateLimit");
 
 router.use(protect, requireRole("admin"));
 
 router.get("/", c.list);
 router.post("/", c.create);
+router.post("/bulk", bulkImportLimiter, c.bulkCreate);
 router.patch("/:id/role", c.setRole);
 router.patch("/:id/password", adminPasswordLimiter, c.setPassword);
 router.patch("/:id/active", c.setActive);

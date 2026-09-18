@@ -131,3 +131,123 @@ exports.setPassword = asyncHandler(async (req, res) => {
   // When mail is on, the account should be told — see the gap in security.md.
   res.json({ message: `Password updated for ${user.name}. Tell them their new password.` });
 });
+
+// ── Bulk import ───────────────────────────────────────────────────────────
+//
+// POST /api/users/bulk  { people: [{ name, email, role }] }
+//
+// No file is uploaded. The browser reads the CSV, parses it and sends plain
+// JSON, so D10 ("no file uploads") stays intact rather than gaining an
+// exception: there is no multipart body, nothing written to disk, no
+// content-type to confuse and no parser of someone else's format running on the
+// server. What arrives here is a list of people, validated like any other input.
+
+const crypto = require("crypto");
+
+// Hashing is the cost here — bcrypt at cost 10 runs about 150ms per password,
+// so a request is capped at something that finishes in a few seconds on a small
+// instance. The client sends larger imports in chunks.
+const MAX_PER_REQUEST = 50;
+
+const NAME_MIN = 2;
+const NAME_MAX = 80;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Admins are deliberately not creatable here. A stray value in a spreadsheet
+// column should not be able to mint an administrator; that stays a deliberate,
+// one-at-a-time act (A9).
+const BULK_ROLES = ["student", "teacher"];
+
+// No l/I/1 or o/O/0 — these get read aloud, written on paper and typed by hand.
+// 12 characters from 55 gives about 69 bits, which is far beyond anything the
+// sign-in limiter would let through.
+const ALPHABET = "abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generatePassword() {
+  const pick = () => ALPHABET[crypto.randomInt(0, ALPHABET.length)];
+  const group = () => Array.from({ length: 4 }, pick).join("");
+  return `${group()}-${group()}-${group()}`;
+}
+
+// Returns either a cleaned row or the reason it cannot be used. Deliberately
+// specific: an admin fixing a spreadsheet needs to know which row and why.
+function cleanRow(raw) {
+  const name = String(raw?.name ?? "").trim();
+  const email = String(raw?.email ?? "").trim().toLowerCase();
+  const role = String(raw?.role ?? "student").trim().toLowerCase() || "student";
+
+  if (!name) return { error: "name is missing" };
+  if (name.length < NAME_MIN) return { error: "name is too short" };
+  if (name.length > NAME_MAX) return { error: `name is longer than ${NAME_MAX} characters` };
+  if (!email) return { error: "email is missing" };
+  if (!EMAIL.test(email)) return { error: "email is not a valid address" };
+  if (!BULK_ROLES.includes(role)) {
+    return { error: `role must be ${BULK_ROLES.join(" or ")} — admins are added one at a time` };
+  }
+  return { person: { name, email, role } };
+}
+
+exports.bulkCreate = asyncHandler(async (req, res) => {
+  const rows = req.body?.people;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ message: "Expected a list of people" });
+  }
+  if (!rows.length) return res.status(400).json({ message: "There is nobody to import" });
+  if (rows.length > MAX_PER_REQUEST) {
+    return res.status(400).json({
+      message: `Import at most ${MAX_PER_REQUEST} people per request`,
+    });
+  }
+
+  const candidates = [];
+  const skipped = [];
+
+  rows.forEach((raw, index) => {
+    const { person, error } = cleanRow(raw);
+    if (error) skipped.push({ index, email: String(raw?.email ?? "").trim(), reason: error });
+    else candidates.push({ index, ...person });
+  });
+
+  // A file that lists the same address twice would otherwise create the first
+  // and fail the second on the unique index, which reads as a random failure.
+  const seen = new Set();
+  const unique = [];
+  for (const c of candidates) {
+    if (seen.has(c.email)) skipped.push({ index: c.index, email: c.email, reason: "duplicated in this file" });
+    else {
+      seen.add(c.email);
+      unique.push(c);
+    }
+  }
+
+  // One query rather than one per row.
+  const taken = new Set(
+    (await User.find({ email: { $in: [...seen] } }).select("email").lean()).map((u) => u.email)
+  );
+
+  const created = [];
+  for (const c of unique) {
+    if (taken.has(c.email)) {
+      skipped.push({ index: c.index, email: c.email, reason: "an account with that email already exists" });
+      continue;
+    }
+    const password = generatePassword();
+    const user = new User({ name: c.name, email: c.email, role: c.role });
+    await user.setPassword(password);
+    // Left unverified: an address asserted by an admin has not been proved by
+    // the person who owns it. Staff are not gated on this, and students are not
+    // gated while mail is off (M24).
+    await user.save();
+
+    // The password appears in this response and nowhere else — not in the
+    // database, not in a log line. If the admin loses it, the way back is
+    // Admin > Users > Set password, not recovery.
+    created.push({ name: user.name, email: user.email, role: user.role, password });
+  }
+
+  res.status(201).json({
+    created,
+    skipped: skipped.sort((a, b) => a.index - b.index),
+    summary: { received: rows.length, created: created.length, skipped: skipped.length },
+  });
+});

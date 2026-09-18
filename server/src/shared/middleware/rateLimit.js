@@ -128,6 +128,20 @@ const adminPasswordLimiter = rateLimit({
   handler: message("Too many password resets. Try again in about 15 minutes."),
 });
 
+// A bulk import creates accounts and burns CPU on bcrypt — about 150ms per
+// person — so it is the one admin endpoint that could flatten a small instance
+// by accident as easily as on purpose. The per-request cap in the controller
+// bounds one call; this bounds how many calls. 30 x 50 is 1500 accounts in a
+// quarter of an hour, which is far beyond any real import.
+const bulkImportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  keyGenerator: (req) => String(req.user?._id || ipKeyGenerator(req.ip)),
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: message("Too many imports at once. Try again in about 15 minutes."),
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
@@ -138,4 +152,5 @@ module.exports = {
   emailChangeLimiter,
   emailVerifyLimiter,
   adminPasswordLimiter,
+  bulkImportLimiter,
 };

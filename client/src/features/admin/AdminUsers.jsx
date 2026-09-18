@@ -5,6 +5,7 @@ import { CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import Modal from "@/shared/components/ui/Modal";
+import BulkImport from "@/features/admin/BulkImport";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -164,6 +165,8 @@ export default function AdminUsers() {
           Create account
         </button>
       </form>
+
+      <BulkImport onImported={load} />
 
       <div className="row" style={{ marginBottom: 12 }}>
         <input
