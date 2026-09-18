@@ -41,8 +41,17 @@ function buildLessons(courseId, rows) {
   await connectDB();
   console.log("Seeding...");
 
-  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@techdea.local";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@techdea.in";
   const adminPass = process.env.SEED_ADMIN_PASSWORD || "admin12345";
+
+  // The demo teacher's address follows the admin's domain, so seeded accounts
+  // do not sit on a reserved TLD that can never receive mail. It is still a
+  // placeholder — a real teacher should be created from Admin > Users with an
+  // address they actually read.
+  const teacherEmail =
+    process.env.SEED_TEACHER_EMAIL ||
+    `teacher@${adminEmail.split("@")[1] || "techdea.in"}`;
+  const teacherPass = process.env.SEED_TEACHER_PASSWORD || "teacher12345";
 
   const admin = await upsertUser({
     email: adminEmail,
@@ -52,10 +61,10 @@ function buildLessons(courseId, rows) {
   });
 
   const teacher = await upsertUser({
-    email: "teacher@techdea.local",
+    email: teacherEmail,
     name: "Alan Cruz",
     role: "teacher",
-    password: "teacher12345",
+    password: teacherPass,
   });
 
   if ((await Course.countDocuments()) === 0) {
@@ -231,7 +240,7 @@ function buildLessons(courseId, rows) {
 
   console.log("\nDone. Sign in with:");
   console.log(`  admin    ${adminEmail}  /  ${adminPass}`);
-  console.log("  teacher  teacher@techdea.local  /  teacher12345");
+  console.log(`  teacher  ${teacherEmail}  /  ${teacherPass}`);
 
   await mongoose.disconnect();
   process.exit(0);
