@@ -11,6 +11,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [bootError, setBootError] = useState(null); // couldn't verify the session
 
+  // What the server is currently able to do. Fetched unauthenticated, because
+  // the sign-in and forgot-password screens need it before anyone has a
+  // session. Defaults to email being ON so a failed fetch degrades to showing
+  // the flow rather than hiding recovery that does work.
+  const [features, setFeatures] = useState({ email: true });
+
   const setToken = (token) => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
@@ -44,6 +50,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     loadMe();
   }, [loadMe]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/config")
+      .then(({ data }) => {
+        if (!cancelled && data?.features) setFeatures(data.features);
+      })
+      .catch(() => {
+        /* keep the default — see above */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // The token stopped being accepted. Drop the session; ProtectedRoute then
   // sends us to /login and remembers where we were.
@@ -84,7 +105,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthCtx.Provider
-      value={{ user, loading, bootError, retryBoot: loadMe, refreshUser: loadMe,
+      value={{ user, loading, bootError, features, retryBoot: loadMe, refreshUser: loadMe,
                login, register, logout, patchUser, applyToken }}
     >
       {children}

@@ -98,3 +98,36 @@ exports.remove = asyncHandler(async (req, res) => {
   await user.deleteOne();
   res.json({ message: "User deleted" });
 });
+
+// PATCH /api/users/:id/password  { password }  — admin sets a user's password
+//
+// This exists because recovery has to be possible while email is switched off.
+// It is deliberately the bluntest tool in the app: an admin can take over any
+// account with it, which is inherent to "an admin can reset passwords" and is
+// why it is admin-only, rate limited, and ends every session the account had.
+//
+// It does not ask for the admin's own password. That would be worth adding if
+// this were reachable by anyone less trusted — noted as a gap rather than
+// pretended away.
+exports.setPassword = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+
+  if (String(password || "").length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  await user.setPassword(password);
+
+  // Whoever was signed in as this account is signed out. If the reason for the
+  // reset is a compromise, leaving the intruder's token alive would defeat it —
+  // and if it is an ordinary lockout, the user is signed in nowhere anyway.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+
+  // No notification is sent: this path exists precisely because mail is off.
+  // When mail is on, the account should be told — see the gap in security.md.
+  res.json({ message: `Password updated for ${user.name}. Tell them their new password.` });
+});

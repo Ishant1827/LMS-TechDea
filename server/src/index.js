@@ -2,7 +2,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const { logFatal } = require("./shared/utils/logger");
-const { assertMailConfig } = require("./shared/mail/config");
+const { assertMailConfig, mailEnabled } = require("./shared/mail/config");
 const { verifyTransport, closeTransport } = require("./shared/mail/transport");
 const { assertOtpConfig } = require("./modules/auth/otp.service");
 const app = require("./app");
@@ -15,7 +15,10 @@ const SHUTDOWN_GRACE_MS = 10_000;
 // first password reset someone genuinely needs.
 try {
   assertMailConfig();
-  assertOtpConfig();
+  // One-time codes only exist to be emailed, so with mail off the pepper is not
+  // needed and demanding it would be a variable to set for a feature that is
+  // switched off.
+  if (mailEnabled()) assertOtpConfig();
 } catch (err) {
   console.error(`Configuration is invalid: ${err.message}`);
   process.exit(1);

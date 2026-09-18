@@ -23,7 +23,7 @@ import { useToast } from "@/shared/context/ToastContext";
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
 
 export default function EmailChangeCard() {
-  const { user, patchUser } = useAuth();
+  const { user, patchUser, features } = useAuth();
   const toast = useToast();
 
   const [open, setOpen] = useState(false);
@@ -34,6 +34,11 @@ export default function EmailChangeCard() {
 
   const pending = user.pendingEmail || "";
   const clear = () => setErr("");
+
+  // Changing an address is confirmed by a code sent to it. Without mail there is
+  // no way to finish, so the card shows the address and points at the one route
+  // that does work.
+  const emailOff = !features?.email;
 
   const request = async (e) => {
     e.preventDefault();
@@ -111,8 +116,14 @@ export default function EmailChangeCard() {
         </div>
       </div>
 
+      {emailOff && (
+        <div className="muted-sm">
+          Changing your email isn't available yet — ask an admin to update it for you.
+        </div>
+      )}
+
       {/* ── a change is waiting on a code ─────────────────────────────── */}
-      {pending && (
+      {!emailOff && pending && (
         <form onSubmit={confirm} noValidate>
           <div className="form-note" style={{ marginTop: 4 }}>
             We sent a 6-digit code to <strong>{pending}</strong>. Enter it to finish moving your
@@ -148,7 +159,7 @@ export default function EmailChangeCard() {
       )}
 
       {/* ── no change in flight ───────────────────────────────────────── */}
-      {!pending && !open && (
+      {!emailOff && !pending && !open && (
         <div className="form-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>
             Change email
@@ -156,7 +167,7 @@ export default function EmailChangeCard() {
         </div>
       )}
 
-      {!pending && open && (
+      {!emailOff && !pending && open && (
         <form onSubmit={request} noValidate>
           <div className="field">
             <label htmlFor="ec-new">New email</label>

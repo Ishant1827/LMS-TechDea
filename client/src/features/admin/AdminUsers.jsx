@@ -4,6 +4,7 @@ import Layout from "@/shared/components/layout/Layout";
 import { CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
+import Modal from "@/shared/components/ui/Modal";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -18,6 +19,13 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState("");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Resetting somebody's password. Kept as its own dialog rather than an inline
+  // field, because it is the one action here that hands over an account.
+  const [pwFor, setPwFor] = useState(null); // the user being reset, or null
+  const [newPw, setNewPw] = useState("");
+  const [pwErr, setPwErr] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
   const [draft, setDraft] = useState({ name: "", email: "", password: "", role: "teacher" });
 
   // Debounce the search box on its own, so the load itself keys off a settled
@@ -70,6 +78,30 @@ export default function AdminUsers() {
       load();
     } catch (e) {
       toast(e.message, "error");
+    }
+  };
+
+  const openReset = (u) => {
+    setPwFor(u);
+    setNewPw("");
+    setPwErr("");
+  };
+
+  const savePassword = async (e) => {
+    e.preventDefault();
+    setPwErr("");
+    if (newPw.length < 6) return setPwErr("At least 6 characters");
+
+    setSavingPw(true);
+    try {
+      const { data } = await api.patch(`/users/${pwFor._id}/password`, { password: newPw });
+      toast(data.message);
+      setPwFor(null);
+      setNewPw("");
+    } catch (e2) {
+      setPwErr(e2.message);
+    } finally {
+      setSavingPw(false);
     }
   };
 
@@ -208,6 +240,9 @@ export default function AdminUsers() {
 
                 {!self && (
                   <div className="mcard-actions">
+                    <button className="btn btn-secondary" onClick={() => openReset(u)}>
+                      Set password
+                    </button>
                     <button className="btn btn-secondary" onClick={() => toggleActive(u)}>
                       {u.active ? "Deactivate" : "Activate"}
                     </button>
@@ -270,6 +305,9 @@ export default function AdminUsers() {
                   <td>
                     {!self && (
                       <div className="chip-row">
+                        <button className="btn btn-ghost" onClick={() => openReset(u)}>
+                          Set password
+                        </button>
                         <button className="btn btn-ghost" onClick={() => toggleActive(u)}>
                           {u.active ? "Deactivate" : "Activate"}
                         </button>
@@ -289,6 +327,47 @@ export default function AdminUsers() {
           </tbody>
           </table>
         </div>
+      )}
+
+      {pwFor && (
+        <Modal title={`Set a password for ${pwFor.name}`} onClose={() => setPwFor(null)}>
+          <form onSubmit={savePassword} noValidate>
+            <p className="text-muted" style={{ marginTop: 0 }}>
+              You'll need to tell {pwFor.name} the new password yourself — nothing is emailed.
+              They'll be signed out everywhere.
+            </p>
+
+            {pwErr && <div className="form-error">{pwErr}</div>}
+
+            <div className="field">
+              <label htmlFor="admin-newpw">New password</label>
+              <input
+                id="admin-newpw"
+                className="input"
+                autoFocus
+                autoComplete="off"
+                value={newPw}
+                onChange={(e) => {
+                  setNewPw(e.target.value);
+                  setPwErr("");
+                }}
+              />
+              <div className="muted-sm" style={{ marginTop: 4 }}>At least 6 characters.</div>
+            </div>
+
+            <div className="form-actions">
+              <button
+                className={"btn btn-primary" + (savingPw ? " is-loading" : "")}
+                disabled={savingPw || newPw.length < 6}
+              >
+                Set password
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => setPwFor(null)}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </Layout>
   );

@@ -131,9 +131,16 @@ function assertMailConfig() {
   return cfg;
 }
 
+// The one question the rest of the app asks. Everything email-shaped — the
+// verification gate, the reset flow, the address-change card — is switched off
+// by the same answer, so there is no second flag to forget.
+function mailEnabled() {
+  return mailConfig().enabled;
+}
+
 // Tests mutate process.env between cases; nothing else should need this.
 function resetMailConfig() {
   cached = null;
 }
 
-module.exports = { mailConfig, assertMailConfig, resetMailConfig, MailConfigError };
+module.exports = { mailConfig, mailEnabled, assertMailConfig, resetMailConfig, MailConfigError };

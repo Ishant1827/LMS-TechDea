@@ -15,7 +15,10 @@ import { useAuth } from "@/features/auth/AuthContext";
  * what the API accepts.
  */
 export default function VerifyBanner() {
-  const { user } = useAuth();
+  const { user, features } = useAuth();
+  // With mail switched off no code can arrive, and nothing is gated — so asking
+  // for a confirmation would be a prompt with no action behind it.
+  if (!features?.email) return null;
   if (!user || user.role !== "student" || user.emailVerifiedAt) return null;
 
   return (

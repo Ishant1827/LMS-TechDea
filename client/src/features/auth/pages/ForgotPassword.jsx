@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "@/features/auth/components/AuthLayout";
 import PasswordInput from "@/shared/components/ui/PasswordInput";
 import api from "@/shared/api/client";
+import { useAuth } from "@/features/auth/AuthContext";
 
 /**
  * Forgotten-password recovery, in three steps on one screen.
@@ -20,6 +21,7 @@ const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
 
 export default function ForgotPassword() {
   const nav = useNavigate();
+  const { features } = useAuth();
 
   const [step, setStep] = useState("email"); // email | code | password | done
   const [email, setEmail] = useState("");
@@ -67,6 +69,8 @@ export default function ForgotPassword() {
       setCooldown(COOLDOWN_SEC);
       setNote("If that address has an account, a code is on its way.");
     } catch (e2) {
+      // The server is the authority: if mail was switched off after this page
+      // loaded, its answer says so and the message is the one to show.
       setErr(e2.message);
     } finally {
       setBusy(false);
@@ -139,6 +143,27 @@ export default function ForgotPassword() {
       setBusy(false);
     }
   };
+
+  // No mail configured means no code can reach anyone, so the whole flow is a
+  // dead end. Say so plainly and point at the route that does work, rather than
+  // letting someone type an address and wait for a message that is not coming.
+  if (!features?.email) {
+    return (
+      <AuthLayout>
+        <h2>Reset your password</h2>
+        <p className="auth-sub">Password reset by email isn't available yet.</p>
+
+        <div className="form-note" style={{ marginBottom: 16 }}>
+          Ask an admin to set a new password for you. If you can still sign in, you can change it
+          yourself from your Profile page.
+        </div>
+
+        <Link to="/login" className="btn btn-primary btn-block" style={{ justifyContent: "center" }}>
+          Back to sign in
+        </Link>
+      </AuthLayout>
+    );
+  }
 
   if (step === "done") {
     return (

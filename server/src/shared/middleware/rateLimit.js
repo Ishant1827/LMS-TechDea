@@ -116,6 +116,18 @@ const emailVerifyLimiter = rateLimit({
   handler: message("Too many attempts. Try again in about 15 minutes."),
 });
 
+// Admin-only, but it writes a password hash and can take over any account, so
+// it gets a ceiling like every other credential-writing path (R8). Keyed on the
+// admin doing it.
+const adminPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  keyGenerator: (req) => String(req.user?._id || ipKeyGenerator(req.ip)),
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: message("Too many password resets. Try again in about 15 minutes."),
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
@@ -125,4 +137,5 @@ module.exports = {
   passwordResetLimiter,
   emailChangeLimiter,
   emailVerifyLimiter,
+  adminPasswordLimiter,
 };

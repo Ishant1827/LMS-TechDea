@@ -18,6 +18,13 @@ app.use(express.json({ limit: "3mb" })); // room for base64 course thumbnails
 
 app.get("/api/health", (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
+// What the client is allowed to offer. Public and unauthenticated on purpose:
+// the sign-in and forgot-password screens need it before anyone has a session,
+// and it says nothing about any account.
+app.get("/api/config", (req, res) => {
+  res.json({ features: { email: require("./shared/mail/config").mailEnabled() } });
+});
+
 app.use("/api/auth", require("./modules/auth/auth.routes"));
 app.use("/api/courses", require("./modules/courses/course.routes"));
 app.use("/api/enrollments", require("./modules/enrollments/enrollment.routes"));

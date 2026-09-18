@@ -4,6 +4,18 @@ const asyncHandler = require("../../shared/utils/asyncHandler");
 const { signToken } = require("../../shared/utils/token");
 const otp = require("./otp.service");
 const { notify } = require("../../modules/notifications/notify");
+const { mailEnabled } = require("../../shared/mail/config");
+
+// Every flow below depends on a code reaching an inbox. With no mail configured
+// that cannot happen, and answering 202 as though it had would leave people
+// waiting for a message that does not exist. A 503 with a code the client can
+// branch on is the honest answer, and it reveals nothing about any address.
+function mailOff(res) {
+  return res.status(503).json({
+    code: "EMAIL_DISABLED",
+    message: "Email isn't set up yet. Ask an admin to set a new password for you.",
+  });
+}
 
 // Codes that an unauthenticated caller may ask for. Kept as an explicit list
 // rather than "any value in OTP_PURPOSES": email_change is only meaningful for a
@@ -46,8 +58,12 @@ exports.register = asyncHandler(async (req, res) => {
   await user.save();
 
   // The account exists and can sign in straight away; it just cannot enrol or
-  // submit until the address is confirmed. See requireVerified.
-  await sendCode({ email: user.email, purpose: "email_verify", userId: user._id });
+  // submit until the address is confirmed. See requireVerified — which also
+  // stands down when there is no mail, so with email off this is simply skipped
+  // and nothing is gated.
+  if (mailEnabled()) {
+    await sendCode({ email: user.email, purpose: "email_verify", userId: user._id });
+  }
 
   res.status(201).json({ token: signToken(user), user });
 });
@@ -60,6 +76,8 @@ exports.register = asyncHandler(async (req, res) => {
 // enumerator is shopping for, and the only place it is allowed to show up is the
 // inbox of whoever owns the address.
 exports.otpRequest = asyncHandler(async (req, res) => {
+  if (!mailEnabled()) return mailOff(res);
+
   const email = normaliseEmail(req.body.email);
   const purpose = String(req.body.purpose || "");
 
@@ -97,6 +115,8 @@ exports.otpRequest = asyncHandler(async (req, res) => {
 // Unauthenticated by design: someone who closed the tab, or opened the email on
 // their phone, still has to be able to finish. Holding the code is the proof.
 exports.otpVerify = asyncHandler(async (req, res) => {
+  if (!mailEnabled()) return mailOff(res);
+
   const email = normaliseEmail(req.body.email);
   const purpose = String(req.body.purpose || "");
   const { code } = req.body;
@@ -145,6 +165,8 @@ exports.otpVerify = asyncHandler(async (req, res) => {
 //
 // Unauthenticated, and authorised entirely by the action token minted above.
 exports.resetPassword = asyncHandler(async (req, res) => {
+  if (!mailEnabled()) return mailOff(res);
+
   const email = normaliseEmail(req.body.email);
   const { actionToken, newPassword } = req.body;
 
@@ -266,6 +288,8 @@ exports.changePassword = asyncHandler(async (req, res) => {
 // account's recovery channel at themselves. A password they do not have stops
 // the whole chain.
 exports.requestEmailChange = asyncHandler(async (req, res) => {
+  if (!mailEnabled()) return mailOff(res);
+
   const newEmail = normaliseEmail(req.body.newEmail);
   const { currentPassword } = req.body;
 
@@ -302,6 +326,8 @@ exports.requestEmailChange = asyncHandler(async (req, res) => {
 // Authenticated, unlike the public otp/verify: the account is known, and the
 // only thing left to prove is control of the address the code went to.
 exports.verifyEmailChange = asyncHandler(async (req, res) => {
+  if (!mailEnabled()) return mailOff(res);
+
   const pending = normaliseEmail(req.user.pendingEmail);
   if (!pending) {
     return res.status(400).json({ message: "There is no email change waiting." });
