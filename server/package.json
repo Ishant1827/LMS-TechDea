@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "seed": "node scripts/seed.js",
     "mail:smoke": "node scripts/mail-smoke.js",
     "backfill:verified": "node scripts/backfill-verified.js"
   },

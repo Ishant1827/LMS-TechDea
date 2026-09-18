@@ -35,7 +35,6 @@ controller and Mongoose model together**.
 
 ```
 server/
-├── scripts/seed.js                 demo admin + teacher + courses
 └── src/
     ├── index.js                    process bootstrap (env, DB, listen)
     ├── app.js                      express wiring + route mounts  ← start here
@@ -147,7 +146,6 @@ in the cascade at an unpredictable point.
 cd server
 npm install
 cp .env.example .env        # then edit MONGO_URI / JWT_SECRET if needed
-npm run seed                # creates the admin + a sample teacher + 2 courses
 npm run dev                 # http://localhost:5000
 
 # 2. Web app (second terminal)
@@ -163,7 +161,6 @@ delegate to the two packages — there is nothing to `npm install` at the root):
 npm run install:all   # npm install in both client and server
 npm run dev:api       # = npm --prefix server run dev
 npm run dev:web       # = npm --prefix client run dev
-npm run seed          # = npm --prefix server run seed
 npm run build         # = npm --prefix client run build
 ```
 
