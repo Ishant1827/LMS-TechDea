@@ -61,7 +61,7 @@ function parseCsv(text) {
 
 // Excel writes a UTF-8 byte-order mark, which would otherwise become part of
 // the first header and stop "name" matching.
-const stripBom = (s) => s.replace(/^﻿/, "");
+const stripBom = (s) => s.replace(/^\uFEFF/, "");
 
 const HEADERS = {
   name: ["name", "full name", "fullname", "student name", "teacher name"],
@@ -284,8 +284,10 @@ export default function BulkImport({ onImported }) {
           {/* ── pick a file ────────────────────────────────────────── */}
           <p className="text-muted" style={{ marginTop: 0 }}>
             A CSV with <strong>name</strong>, <strong>email</strong> and an optional{" "}
-            <strong>role</strong> column (student or teacher — blank means student). Everyone gets a
-            generated password you'll see once. Admins are added one at a time, above.
+            <strong>role</strong> column (student or teacher — blank means student). Each person
+            gets a password built from their own name, like <code>techdea@Asha47</code> — shown
+            once here, so download them. Tell people to change it once they're in. Admins are
+            added one at a time, above.
           </p>
 
           <div className="form-actions" style={{ marginBottom: rows.length ? 14 : 0 }}>

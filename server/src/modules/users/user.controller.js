@@ -158,15 +158,49 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // one-at-a-time act (A9).
 const BULK_ROLES = ["student", "teacher"];
 
-// No l/I/1 or o/O/0 — these get read aloud, written on paper and typed by hand.
-// 12 characters from 55 gives about 69 bits, which is far beyond anything the
-// sign-in limiter would let through.
-const ALPHABET = "abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789";
+// Imported passwords are built from the person's own name plus two digits, at
+// the owner's request: memorable, sayable down a phone, and typable by someone
+// who has just been told it.
+//
+// The digits matter more than they look. Without them there are four candidates
+// for a two-part name, which anyone knowing that name could try in seconds.
+// With them there are 400, and the sign-in limiter allows eight attempts per
+// fifteen minutes — so guessing goes from trivial to roughly half a day of
+// sustained effort against one account. Still not a secret, and still worth
+// changing soon; recorded against B5 in security.md rather than left implied.
+const BRAND = "techdea";
 
-function generatePassword() {
-  const pick = () => ALPHABET[crypto.randomInt(0, ALPHABET.length)];
-  const group = () => Array.from({ length: 4 }, pick).join("");
-  return `${group()}-${group()}-${group()}`;
+// Whitespace splits the name; anything that is not a letter or digit is dropped,
+// so a name that arrived as "Patel, Asha" does not produce a password with a
+// comma in it that nobody can retype.
+function nameParts(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .map((p) => p.replace(/[^\p{L}\p{N}]/gu, ""))
+    .filter(Boolean);
+
+  if (parts.length <= 1) return parts;
+  // First and last, not first and second: "Ishant Kumar Srivastava" is known by
+  // the two ends, not the middle.
+  return [parts[0], parts[parts.length - 1]];
+}
+
+function generatePassword(name) {
+  const digits = String(crypto.randomInt(10, 100)); // always two
+
+  const parts = nameParts(name);
+  if (!parts.length) {
+    // Nothing usable in the name — a row of punctuation, say. Four digits here
+    // rather than two, because the name is carrying no entropy at all.
+    return `${BRAND}@${crypto.randomInt(1000, 10000)}`;
+  }
+
+  const candidates = parts.flatMap((part) => [
+    `${BRAND}@${part}${digits}`,
+    `${part}${digits}@${BRAND}`,
+  ]);
+  return candidates[crypto.randomInt(0, candidates.length)];
 }
 
 // Returns either a cleaned row or the reason it cannot be used. Deliberately
@@ -231,7 +265,7 @@ exports.bulkCreate = asyncHandler(async (req, res) => {
       skipped.push({ index: c.index, email: c.email, reason: "an account with that email already exists" });
       continue;
     }
-    const password = generatePassword();
+    const password = generatePassword(c.name);
     const user = new User({ name: c.name, email: c.email, role: c.role });
     await user.setPassword(password);
     // Left unverified: an address asserted by an admin has not been proved by
