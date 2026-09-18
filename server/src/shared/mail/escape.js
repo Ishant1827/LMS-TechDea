@@ -1,7 +1,7 @@
 // The HTML half of an email is a render sink like any other, and the content
 // reaching it is not always ours: a course title, a student's name, a doubt's
 // subject. R4 says user content is never rendered as HTML — this is how that
-// rule is kept on the far side of an SMTP connection.
+// rule is kept on the far side of a mail transport.
 //
 // The `html` tagged template escapes every interpolated value, so escaping is
 // the default and skipping it takes deliberate effort:

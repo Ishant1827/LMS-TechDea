@@ -1,10 +1,10 @@
 // Turns a template id and its data into the three parts an envelope needs.
 //
-// This is also where the subject line is checked. A subject is an SMTP header,
-// and a newline inside one ends the header and starts another — which is how a
-// value that reached here unvalidated could add a Bcc. Templates build their own
-// subjects today, so this is belt and braces, but it is the right place for it
-// to live once a subject ever carries a course name.
+// This is also where the subject line is checked. A subject becomes a mail
+// header, and a newline inside one ends the header and starts another — which is
+// how a value that reached here unvalidated could add a Bcc. Templates build
+// their own subjects today, so this is belt and braces, but it is the right
+// place for it to live once a subject ever carries a course name.
 
 const registry = require("./registry");
 

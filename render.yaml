@@ -32,32 +32,25 @@ services:
         sync: false
 
       # ── Email ──────────────────────────────────────────────────────
-      # MAIL_TRANSPORT unset means outbound email is disabled: the service
-      # boots and serves normally, and any attempt to send is logged and
-      # skipped. The console and json transports are refused here outright,
-      # because they write message bodies — one-time codes included — to the
-      # log view.
+      # There is no MAIL_TRANSPORT here on purpose. Unset means outbound email
+      # is disabled: the service boots and serves normally, any send is logged
+      # and skipped, and nothing is gated on a code nobody can receive.
+      # Password recovery is by admin — Admin > Users > Set password.
       #
-      # Enabling delivery means setting MAIL_TRANSPORT=smtp and *all* of the
-      # values below; a partial SMTP configuration stops the boot rather than
-      # quietly sending nothing. Credentials stay sync:false per C2.
+      # Do not set MAIL_TRANSPORT=smtp. The SMTP transport is commented out
+      # (server/src/shared/mail/transport.js) because Render's free plan blocks
+      # outbound traffic to ports 25, 465 and 587, so it could never deliver
+      # from here. Setting it stops the boot with an explanation rather than
+      # silently sending nothing.
       #
-      # - key: MAIL_TRANSPORT
-      #   value: smtp
-      # - key: MAIL_FROM
-      #   value: techdea.lms@gmail.com
-      # - key: MAIL_FROM_NAME
-      #   value: TechDea LMS
-      # - key: MAIL_LOGO_URL
-      #   value: https://lms-client-szuv.onrender.com/techdea-logo.png
-      # - key: SMTP_HOST
-      #   value: smtp.gmail.com
-      # - key: SMTP_PORT
-      #   value: "587"
-      # - key: SMTP_USER       # the same Gmail address
-      #   sync: false
-      # - key: SMTP_PASS       # Gmail app password, never the account password
-      #   sync: false
+      # console and json are refused in production — they write message bodies,
+      # one-time codes included, to the log view.
+      #
+      # To send mail again: restore a transport in transport.js (SMTP needs a
+      # host that does not block the port; an HTTP email API needs no port at
+      # all), then set MAIL_TRANSPORT and its credentials here.
+      - key: MAIL_LOGO_URL
+        value: https://lms-client-szuv.onrender.com/techdea-logo.png
 
   # ── Client ─────────────────────────────────────────────────────────────
   - type: web

@@ -10,9 +10,9 @@ const app = require("./app");
 const PORT = process.env.PORT || 5000;
 const SHUTDOWN_GRACE_MS = 10_000;
 
-// Mail configuration is validated before anything else starts. A bad SMTP
-// setting must be a failed boot with a readable reason, not a surprise on the
-// first password reset someone genuinely needs.
+// Mail configuration is validated before anything else starts. A bad setting
+// must be a failed boot with a readable reason, not a surprise on the first
+// password reset someone genuinely needs.
 try {
   assertMailConfig();
   // One-time codes only exist to be emailed, so with mail off the pepper is not

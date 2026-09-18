@@ -3,17 +3,29 @@
 // password reset someone actually needs — at 11pm, on a Sunday — rather than on
 // the deploy that broke it.
 //
-// Four modes:
-//   smtp     real delivery
+// Three modes, plus off:
 //   console  prints the rendered message to stdout (development)
 //   json     returns the message as JSON, asserted against (tests)
 //   off      nothing is configured; any send throws a clear error
 //
-// There is deliberately no fallback from `smtp` to anything else. A misconfigured
-// SMTP host must stop the boot, not silently downgrade to a transport that
-// pretends to send (R10, A4).
+// `smtp` was the fourth and is gone — see transport.js. It is still recognised
+// here, and only here, so that a deployment still carrying MAIL_TRANSPORT=smtp
+// gets an explanation instead of a puzzle. That is four lines against an outage
+// nobody would be able to read.
+//
+// There is deliberately no silent downgrade to a transport that pretends to
+// send: a misconfiguration stops the boot (R10, A4).
 
-const MODES = ["smtp", "console", "json", "off"];
+const MODES = ["console", "json", "off"];
+
+// Recognised well enough to explain itself, not well enough to run.
+const REMOVED_MODES = {
+  smtp:
+    "the SMTP transport was removed — Render's free plan blocks outbound SMTP " +
+    "ports (25, 465, 587), so it could never deliver from there. Unset " +
+    "MAIL_TRANSPORT to disable email, or add a transport in " +
+    "src/shared/mail/transport.js.",
+};
 
 // console and json print or return the full message body. In production that
 // would write one-time codes into the platform's log view, so they are refused
@@ -33,6 +45,9 @@ function resolveMode() {
     // fail loudly rather than to route codes through the logs.
     return isProd() ? "off" : "console";
   }
+  if (REMOVED_MODES[raw]) {
+    throw new MailConfigError(`MAIL_TRANSPORT="${raw}" — ${REMOVED_MODES[raw]}`);
+  }
   if (!MODES.includes(raw)) {
     throw new MailConfigError(
       `MAIL_TRANSPORT must be one of ${MODES.join(", ")} — got "${raw}".`
@@ -41,8 +56,8 @@ function resolveMode() {
   if (isProd() && DEV_ONLY_MODES.includes(raw)) {
     throw new MailConfigError(
       `MAIL_TRANSPORT="${raw}" prints message bodies, including one-time codes, ` +
-        `and must never run in production. Set MAIL_TRANSPORT=smtp, or leave it ` +
-        `unset to disable sending entirely.`
+        `and must never run in production. Leave MAIL_TRANSPORT unset to disable ` +
+        `sending entirely, or restore a real transport — see transport.js.`
     );
   }
   return raw;
@@ -67,34 +82,15 @@ function optionalAddress(key) {
   return value;
 }
 
-function requireValue(key) {
-  const value = String(process.env[key] || "").trim();
-  if (!value) throw new MailConfigError(`${key} is required when MAIL_TRANSPORT=smtp.`);
-  return value;
-}
-
-function smtpSettings() {
-  const secure = String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
-  // 465 speaks TLS from the first byte; 587 starts in the clear and upgrades.
-  // Port 25 is server-to-server relay and is not an option here.
-  const port = Number(process.env.SMTP_PORT || (secure ? 465 : 587));
-
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new MailConfigError(`SMTP_PORT must be a port number — got "${process.env.SMTP_PORT}".`);
-  }
-  if (port === 25) {
-    throw new MailConfigError("SMTP_PORT 25 is unauthenticated relay — use 587 (STARTTLS) or 465.");
-  }
-  return { host: requireValue("SMTP_HOST"), port, secure, user: requireValue("SMTP_USER"), pass: requireValue("SMTP_PASS") };
-}
-
 // Real delivery needs a real sender. The console and json transports do not —
 // nothing leaves the machine — so they fall back to a placeholder rather than
 // refusing to boot a development server over a variable that does not matter yet.
 const DEV_FROM = "no-reply@techdea.local";
 
-function senderAddress(mode) {
-  if (mode === "smtp") return requireAddress("MAIL_FROM");
+function senderAddress() {
+  // Nothing leaves the machine under console or json, so a placeholder is
+  // honest. A real transport should require a real sender — add that check
+  // beside it.
   return optionalAddress("MAIL_FROM") || DEV_FROM;
 }
 
@@ -105,10 +101,9 @@ function build() {
   return Object.freeze({
     mode,
     enabled: true,
-    from: senderAddress(mode),
+    from: senderAddress(),
     fromName: String(process.env.MAIL_FROM_NAME || "TechDea LMS").replace(/[\r\n"]/g, "").trim(),
     replyTo: optionalAddress("MAIL_REPLY_TO"),
-    smtp: mode === "smtp" ? smtpSettings() : null,
   });
 }
 

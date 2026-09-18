@@ -32,7 +32,7 @@ const normaliseEmail = (value) => String(value || "").toLowerCase().trim();
 async function sendCode({ email, purpose, userId = null }) {
   try {
     const { code, expiresMinutes } = await otp.issue({ email, purpose, userId });
-    // Not awaited: SMTP latency is unbounded and no request should wait on it.
+    // Not awaited: delivery latency is unbounded and no request should wait on it.
     void notify("auth.otp.requested", { email, code, purpose, expiresMinutes });
     return true;
   } catch (err) {

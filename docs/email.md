@@ -4,7 +4,9 @@
 security baseline; anything here that becomes a security control moves *there* once it is in
 the code and verified.
 
-Status: **Phases 0 and 1 complete** — signup verification, password reset, `tokenVersion`
+Status: **Phases 0 and 1 complete in code; no live transport** (§7)
+
+ — signup verification, password reset, `tokenVersion`
 revocation and verified email change are all live and recorded in `security.md` §4b and §4c.
 Phases 2–4 are design only.
 Written: **2026-09-18**
@@ -24,7 +26,7 @@ and 10 exist to prevent that.
 | **OTP covers** | Signup email verification, password reset, **and email change** | The first two close `G7` and `G5`. The third closes the takeover chain in §8.4 |
 | **Passwordless login** | Deferred | Six digits as a permanent auth factor is a much heavier decision. The `purpose` field (`M3`) makes it a new enum value later, not a new subsystem |
 | **Unverified accounts** | **Soft gate** — may sign in and browse; may not enroll, submit, or post doubts | A hard gate turns one undelivered email into a fully blocked user, and delivery is not yet proven |
-| **Sending** | Gmail app password on a dedicated account | No domain owned yet, so SPF/DKIM/DMARC alignment is unavailable. §7 records the ceiling this imposes and when it must change |
+| **Sending** | **None — the SMTP transport was removed** | Render's free plan blocks outbound SMTP ports, and a free Gmail sender lands in spam regardless. §7 records what it would take to send again |
 | **Session revocation** | `tokenVersion` ships **with** this feature | A reset that leaves a stolen 7-day JWT alive is theatre. Closes most of `G2` |
 
 ---

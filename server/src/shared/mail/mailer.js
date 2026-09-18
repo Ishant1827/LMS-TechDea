@@ -35,14 +35,15 @@ function assertRecipient(to) {
   return value;
 }
 
-// Error messages from an SMTP library quote what they were handling, which can
-// include the credential that failed to authenticate. And a rendering failure
-// deep in a template could carry the one-time code with it. Neither belongs in
-// the log view, so both are scrubbed on the way out (M11).
+// A provider's error message quotes what it was handling, which can include the
+// credential that failed to authenticate. And a rendering failure deep in a
+// template could carry the one-time code with it. Neither belongs in the log
+// view, so both are scrubbed on the way out (M11). Whatever transport comes
+// next, add its credential to this list.
 function redact(message) {
   let out = String(message ?? "");
 
-  const secrets = [process.env.SMTP_PASS, process.env.OTP_PEPPER].filter(
+  const secrets = [process.env.OTP_PEPPER].filter(
     (s) => s && String(s).length >= 4
   );
   for (const secret of secrets) out = out.split(secret).join("[redacted]");
