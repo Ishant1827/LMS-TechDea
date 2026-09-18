@@ -3,7 +3,8 @@ import { Download } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import Modal from "@/shared/components/ui/Modal";
-import { Bar, CenterLoader } from "@/shared/components/ui";
+import { Bar, CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useIsNarrow } from "@/shared/hooks/useMediaQuery";
 
@@ -20,28 +21,39 @@ function csvEscape(v) {
 
 export default function TeacherStudents() {
   const narrow = useIsNarrow();
-  const [data, setData] = useState(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [sel, setSel] = useState(null);
 
+  // Debounce the search box separately so the loader keys off a settled query
+  // rather than firing a request per keystroke.
+  const [query, setQuery] = useState("");
   useEffect(() => {
-    const t = setTimeout(() => {
-      const params = {};
-      if (q.trim()) params.q = q.trim();
-      if (filter !== "all") params.filter = filter;
-      api
-        .get("/students", { params })
-        .then((r) => setData(r.data))
-        .catch(() => setData({ students: [], courseCount: 0 }));
-    }, 250);
+    const t = setTimeout(() => setQuery(q.trim()), 250);
     return () => clearTimeout(t);
-  }, [q, filter]);
+  }, [q]);
 
-  if (!data)
+  const { status, data, error, reload } = useLoad(() => {
+    const params = {};
+    if (query) params.q = query;
+    if (filter !== "all") params.filter = filter;
+    return api.get("/students", { params }).then((r) => r.data);
+  }, [query, filter]);
+
+  // Only the first load blanks the page; a re-search keeps the previous rows
+  // on screen, which is how this behaved before.
+  if (status === "loading" && !data)
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <h2 className="page-title">Students</h2>
+        <ErrorState title="Couldn't load students" message={error.message} onRetry={reload} />
       </Layout>
     );
 

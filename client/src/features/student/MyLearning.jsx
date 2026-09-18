@@ -1,32 +1,29 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { Bar, CenterLoader, CourseThumb } from "@/shared/components/ui";
+import { Bar, CenterLoader, CourseThumb, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 
 export default function MyLearning() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [list, setList] = useState(null);
-
-  const load = () =>
-    api
-      .get("/enrollments/mine")
-      .then((r) => {
-        const arr = r.data.enrollments.slice().sort((a, b) => {
-          const ad = a.percent >= 100 ? 1 : 0;
-          const bd = b.percent >= 100 ? 1 : 0;
-          return ad !== bd ? ad - bd : b.percent - a.percent;
-        });
-        setList(arr);
+  const {
+    status,
+    data: list,
+    error,
+    reload,
+    setData: setList,
+  } = useLoad(() =>
+    api.get("/enrollments/mine").then((r) =>
+      r.data.enrollments.slice().sort((a, b) => {
+        const ad = a.percent >= 100 ? 1 : 0;
+        const bd = b.percent >= 100 ? 1 : 0;
+        return ad !== bd ? ad - bd : b.percent - a.percent;
       })
-      .catch(() => setList([]));
-
-  useEffect(() => {
-    load();
-  }, []);
+    )
+  );
 
   const leave = async (e) => {
     const ok = await confirm({
@@ -45,14 +42,22 @@ export default function MyLearning() {
       setList((l) => l.filter((x) => x._id !== e._id));
       toast("Left the course");
     } catch (err) {
-      toast(err.message);
+      toast(err.message, "error");
     }
   };
 
-  if (!list)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <h2 className="page-title">My Learning</h2>
+        <ErrorState title="Couldn't load your courses" message={error.message} onRetry={reload} />
       </Layout>
     );
 

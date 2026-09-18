@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Trash2, ArrowUp, ArrowDown, ArrowLeft, Plus, ImagePlus, Eye } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import Modal from "@/shared/components/ui/Modal";
 import CoursePreview from "@/features/teacher/components/CoursePreview";
-import { CenterLoader, CourseThumb } from "@/shared/components/ui";
+import { CenterLoader, CourseThumb, ErrorState } from "@/shared/components/ui";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
@@ -40,8 +40,13 @@ export default function CourseEditor() {
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  useEffect(() => {
-    if (isNew) return;
+  const [loadError, setLoadError] = useState(null);
+
+  // The editor hydrates a form rather than a list, so it keeps its own load —
+  // but it no longer treats every failure as a deleted course.
+  const loadCourse = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     api
       .get(`/courses/${id}`)
       .then((r) => {
@@ -61,11 +66,22 @@ export default function CourseEditor() {
         setLessons(r.data.lessons);
         setLoading(false);
       })
-      .catch(() => {
-        toast("Course not found");
-        nav("/manage");
+      .catch((e) => {
+        // Only a genuinely missing or forbidden course sends the teacher back
+        // to the list; a dropped connection stays put and offers a retry.
+        if (e.status === 404 || e.status === 403) {
+          toast("Course not found", "error");
+          return nav("/manage");
+        }
+        setLoadError(e);
+        setLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (!isNew) loadCourse();
+  }, [isNew, loadCourse]);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -78,7 +94,7 @@ export default function CourseEditor() {
       setForm((f) => ({ ...f, thumbnailUrl: dataUrl }));
       toast("Image added — Save Changes to keep it");
     } catch (err) {
-      toast(err.message);
+      toast(err.message, "error");
     }
   };
 
@@ -95,9 +111,9 @@ export default function CourseEditor() {
 
   const saveCourse = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return toast("Title is required");
+    if (!form.title.trim()) return toast("Title is required", "error");
     const hrs = Number(form.hours) || 0;
-    if (hrs < 0 || hrs > 500) return toast("Estimated time must be between 0 and 500 hours");
+    if (hrs < 0 || hrs > 500) return toast("Estimated time must be between 0 and 500 hours", "error");
     setSaving(true);
     try {
       if (isNew) {
@@ -110,10 +126,21 @@ export default function CourseEditor() {
         toast("Saved");
       }
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setSaving(false);
   };
+
+  if (loadError)
+    return (
+      <Layout>
+        <ErrorState
+          title="Couldn't load this course"
+          message={loadError.message}
+          onRetry={loadCourse}
+        />
+      </Layout>
+    );
 
   if (loading)
     return (
@@ -359,7 +386,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!draft.title.trim()) return toast("Lesson title is required");
+    if (!draft.title.trim()) return toast("Lesson title is required", "error");
     setBusy(true);
     try {
       const body = { ...draft, durationMin: Number(draft.durationMin) || 0 };
@@ -370,7 +397,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
       setEditingId(null);
       toast(editingId ? "Lesson updated" : "Lesson added");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setBusy(false);
   };
@@ -396,7 +423,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
       await api.put(`/courses/${courseId}/lessons/${l._id}`, { published: l.published === false });
       await reload();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -419,7 +446,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
       }
       toast("Lesson deleted");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -438,7 +465,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
     try {
       await api.put(`/courses/${courseId}/lessons/reorder`, { orderedIds: flat.map((l) => l._id) });
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
       reload();
     }
   };

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { BookOpen, Clock, Award, Play, ArrowLeft } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, CourseThumb } from "@/shared/components/ui";
+import { CenterLoader, CourseThumb, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import LessonContent from "@/shared/components/lesson/LessonContent";
 import Modal from "@/shared/components/ui/Modal";
 import { StarsDisplay, StarsInput } from "@/shared/components/ui/Stars";
@@ -31,41 +32,43 @@ export default function CourseDetails() {
   const { id } = useParams();
   const toast = useToast();
   const confirm = useConfirm();
-  const [data, setData] = useState(null);
   const [owned, setOwned] = useState(false);
   // where "Go to Course" should land — the lesson the student left off on
   const [resumeLessonId, setResumeLessonId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [notFound, setNotFound] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // reviews
-  const [rev, setRev] = useState(null); // { reviews, avg, count, mine }
-  const [revFailed, setRevFailed] = useState(false);
-  const [rDraft, setRDraft] = useState({ rating: 0, text: "" });
-  const [rSaving, setRSaving] = useState(false);
-
-  const loadReviews = () =>
-    api
-      .get(`/courses/${id}/reviews`)
-      .then((r) => {
-        setRev(r.data);
-        setRevFailed(false);
-        if (r.data.mine) setRDraft({ rating: r.data.mine.rating, text: r.data.mine.text || "" });
-      })
-      .catch(() => setRevFailed(true));
-
-  useEffect(() => {
-    Promise.all([api.get(`/courses/${id}`), api.get("/enrollments/mine")])
-      .then(([c, m]) => {
-        setData(c.data);
+  const { status, data, error, reload, setData } = useLoad(
+    () =>
+      Promise.all([api.get(`/courses/${id}`), api.get("/enrollments/mine")]).then(([c, m]) => {
         const mine = m.data.enrollments.find((e) => e.course._id === id);
         setOwned(!!mine);
         setResumeLessonId(mine?.currentLessonId || null);
-      })
-      .catch(() => setNotFound(true));
-    loadReviews();
-  }, [id]);
+        return c.data;
+      }),
+    [id]
+  );
+
+  // reviews — loaded separately so a reviews outage doesn't take the course
+  // page with it
+  const [rDraft, setRDraft] = useState({ rating: 0, text: "" });
+  const [rSaving, setRSaving] = useState(false);
+  const revLoad = useLoad(
+    () =>
+      api.get(`/courses/${id}/reviews`).then((r) => {
+        if (r.data.mine) setRDraft({ rating: r.data.mine.rating, text: r.data.mine.text || "" });
+        return r.data;
+      }),
+    [id]
+  );
+  const rev = revLoad.data; // { reviews, avg, count, mine }
+
+  // the course carries the rating average, so it is refreshed alongside
+  const refreshAfterReview = async () => {
+    revLoad.reload();
+    const r = await api.get(`/courses/${id}`);
+    setData(r.data);
+  };
 
   const enroll = async () => {
     setBusy(true);
@@ -74,21 +77,21 @@ export default function CourseDetails() {
       toast("Enrolled");
       setOwned(true);
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setBusy(false);
   };
 
   const saveReview = async (e) => {
     e.preventDefault();
-    if (!rDraft.rating) return toast("Pick a star rating");
+    if (!rDraft.rating) return toast("Pick a star rating", "error");
     setRSaving(true);
     try {
       await api.post(`/courses/${id}/reviews`, rDraft);
       toast("Review saved");
-      await Promise.all([loadReviews(), api.get(`/courses/${id}`).then((r) => setData(r.data))]);
+      await refreshAfterReview();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setRSaving(false);
   };
@@ -104,17 +107,31 @@ export default function CourseDetails() {
     try {
       await api.delete(`/courses/${id}/reviews/mine`);
       setRDraft({ rating: 0, text: "" });
-      await Promise.all([loadReviews(), api.get(`/courses/${id}`).then((r) => setData(r.data))]);
+      await refreshAfterReview();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
-  if (notFound)
+  // A failure here used to read as "Course not found" whatever went wrong —
+  // only an actual 404 says that now.
+  if (status === "error")
     return (
       <Layout>
-        <h3>Course not found</h3>
-        <Link className="btn btn-secondary" to="/courses" style={{ width: "fit-content" }}>
+        {error.status === 404 ? (
+          <h3>Course not found</h3>
+        ) : (
+          <ErrorState
+            title="Couldn't load this course"
+            message={error.message}
+            onRetry={reload}
+          />
+        )}
+        <Link
+          className="btn btn-secondary"
+          to="/courses"
+          style={{ width: "fit-content", marginTop: 14 }}
+        >
           <ArrowLeft />
           Back to courses
         </Link>
@@ -262,10 +279,10 @@ export default function CourseDetails() {
             </form>
           )}
 
-          {revFailed ? (
+          {revLoad.status === "error" ? (
             <p className="muted-sm">
               Couldn't load reviews.{" "}
-              <button className="linklike" onClick={loadReviews}>
+              <button className="linklike" onClick={revLoad.reload}>
                 Try again
               </button>
             </p>

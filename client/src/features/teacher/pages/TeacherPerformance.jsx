@@ -3,37 +3,45 @@ import { Link } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 
 export default function TeacherPerformance() {
-  const [courses, setCourses] = useState(null);
   const [courseId, setCourseId] = useState("");
-  const [perf, setPerf] = useState(null);
+  const courseLoad = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
+  const courses = courseLoad.data;
 
+  // Default to the first course once they arrive.
   useEffect(() => {
-    api
-      .get("/courses/manage")
-      .then((r) => {
-        setCourses(r.data.courses);
-        if (r.data.courses[0]) setCourseId(r.data.courses[0]._id);
-      })
-      .catch(() => setCourses([]));
-  }, []);
+    if (!courseId && courses?.[0]) setCourseId(courses[0]._id);
+  }, [courses, courseId]);
 
-  useEffect(() => {
-    if (!courseId) return;
-    setPerf(null);
-    api
-      .get(`/courses/${courseId}/performance`)
-      .then((r) => setPerf(r.data))
-      .catch(() => setPerf({ error: true }));
-  }, [courseId]);
+  const perfLoad = useLoad(
+    () =>
+      courseId
+        ? api.get(`/courses/${courseId}/performance`).then((r) => r.data)
+        : Promise.resolve(null),
+    [courseId]
+  );
+  const perf = perfLoad.data;
 
-  if (!courses)
+  if (courseLoad.status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (courseLoad.status === "error")
+    return (
+      <Layout>
+        <h2 style={{ marginBottom: 16 }}>Performance</h2>
+        <ErrorState
+          title="Couldn't load your courses"
+          message={courseLoad.error.message}
+          onRetry={courseLoad.reload}
+        />
       </Layout>
     );
 
@@ -55,10 +63,14 @@ export default function TeacherPerformance() {
 
       {courses.length === 0 ? (
         <p className="text-muted">Create a course first.</p>
+      ) : perfLoad.status === "error" ? (
+        <ErrorState
+          title="Couldn't load performance"
+          message={perfLoad.error.message}
+          onRetry={perfLoad.reload}
+        />
       ) : !perf ? (
         <CenterLoader />
-      ) : perf.error ? (
-        <p className="text-muted">Couldn't load performance.</p>
       ) : perf.enrolled === 0 ? (
         <p className="muted-sm">No one has enrolled in this course yet.</p>
       ) : (

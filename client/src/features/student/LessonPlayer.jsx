@@ -13,6 +13,7 @@ import {
   ListTree,
 } from "lucide-react";
 import api from "@/shared/api/client";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { BootLoader } from "@/shared/components/ui";
 import Brand from "@/shared/components/layout/Brand";
 import LessonContent from "@/shared/components/lesson/LessonContent";
@@ -34,9 +35,10 @@ export default function LessonPlayer() {
   const { courseId, lessonId } = useParams();
   const nav = useNavigate();
   const toast = useToast();
-  const [state, setState] = useState(null); // { course, lessons, doneSet }
+  // { course, lessons, doneSet } — populated by the load below
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [notesFailed, setNotesFailed] = useState(false);
   const visited = useRef(new Set());
   // curriculum drawer — only reachable below 900px, where the sidebar is off-canvas
   const [navOpen, setNavOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function LessonPlayer() {
         if (!silent && draftRef.current === text) setNoteState("Saved");
       } catch (e) {
         if (!silent) {
-          toast(e.message);
+          toast(e.message, "error");
           setNoteState("Unsaved");
         }
       }
@@ -120,29 +122,39 @@ export default function LessonPlayer() {
   const [doubtText, setDoubtText] = useState("");
   const [doubtSending, setDoubtSending] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      api.get(`/courses/${courseId}`),
-      api.get("/enrollments/mine"),
-      api.get(`/enrollments/${courseId}/notes`).catch(() => ({ data: { notes: {} } })),
-    ])
-      .then(([c, m, n]) => {
-        if (cancelled) return;
+  const {
+    status,
+    data: state,
+    error,
+    reload,
+    setData: setState,
+  } = useLoad(
+    () =>
+      Promise.all([
+        api.get(`/courses/${courseId}`),
+        api.get("/enrollments/mine"),
+        // Notes are non-fatal: the lesson still plays without them. But the
+        // student must be told, or an empty box reads as "my notes are gone".
+        api.get(`/enrollments/${courseId}/notes`).catch(() => {
+          setNotesFailed(true);
+          return { data: { notes: {} } };
+        }),
+      ]).then(([c, m, n]) => {
         const mine = m.data.enrollments.find((e) => e.course._id === courseId);
-        if (!mine) return setErr("not-enrolled");
+        if (!mine) {
+          setErr("not-enrolled");
+          return null;
+        }
+        setNotesFailed(false);
         notesRef.current = n.data.notes || {};
-        setState({
+        return {
           course: c.data.course,
           lessons: c.data.lessons,
           doneSet: new Set((mine.completedLessonIds || []).map(String)),
-        });
-      })
-      .catch(() => !cancelled && setErr("not-found"));
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId]);
+        };
+      }),
+    [courseId]
+  );
 
   // load this lesson's note + remember position, once per lesson visit.
   // keyed on `ready` (not `state`) so completing a lesson doesn't reset the draft.
@@ -158,6 +170,8 @@ export default function LessonPlayer() {
     setNoteState(initial === server ? "" : "Unsaved");
     if (!visited.current.has(lessonId)) {
       visited.current.add(lessonId);
+      // Deliberately silent: this only records where to resume. Losing it
+      // costs the student one click, and there is nothing useful to say.
       api.post(`/enrollments/${courseId}/visit`, { lessonId }).catch(() => {});
     }
     // save this lesson's note before switching away or unmounting
@@ -173,10 +187,22 @@ export default function LessonPlayer() {
         </Link>
       </Centered>
     );
-  if (err === "not-found")
+  // Previously any failure here — a dropped connection included — claimed the
+  // course did not exist.
+  if (status === "error")
     return (
       <Centered>
-        <h3>Course not found</h3>
+        {error.status === 404 ? (
+          <h3>Course not found</h3>
+        ) : (
+          <>
+            <h3>Couldn't open this course</h3>
+            <p className="text-muted" style={{ marginTop: 0 }}>{error.message}</p>
+            <button className="btn btn-primary" onClick={reload} style={{ justifyContent: "center" }}>
+              Try again
+            </button>
+          </>
+        )}
         <Link className="btn btn-secondary" to="/my-learning" style={{ justifyContent: "center" }}>
           My Learning
         </Link>
@@ -233,7 +259,7 @@ export default function LessonPlayer() {
       toast(data.justCompletedCourse ? "Course complete! 🎉" : "Lesson complete");
       if (lessons[idx + 1]) go(idx + 1);
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setSaving(false);
   };
@@ -251,7 +277,7 @@ export default function LessonPlayer() {
   };
 
   const sendDoubt = async () => {
-    if (!doubtText.trim()) return toast("Write your question first");
+    if (!doubtText.trim()) return toast("Write your question first", "error");
     setDoubtSending(true);
     try {
       await api.post("/doubts", { courseId, lessonId, text: doubtText });
@@ -259,7 +285,7 @@ export default function LessonPlayer() {
       setDoubtText("");
       setAskOpen(false);
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setDoubtSending(false);
   };
@@ -387,6 +413,12 @@ export default function LessonPlayer() {
                     {noteState}
                   </span>
                 </div>
+                {notesFailed && (
+                  <p className="muted-sm" style={{ marginTop: 0, color: "var(--color-danger)" }}>
+                    Your saved notes couldn't be loaded — anything you type here may overwrite
+                    them.
+                  </p>
+                )}
                 <textarea
                   className="input"
                   style={{ minHeight: 160 }}

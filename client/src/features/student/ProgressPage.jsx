@@ -1,22 +1,29 @@
-import { useEffect, useState } from "react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { Bar, CenterLoader } from "@/shared/components/ui";
+import { Bar, CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 
 export default function ProgressPage() {
-  const [list, setList] = useState(null);
+  const { status, data: list, error, reload } = useLoad(() =>
+    api.get("/enrollments/mine").then((r) => r.data.enrollments)
+  );
 
-  useEffect(() => {
-    api
-      .get("/enrollments/mine")
-      .then((r) => setList(r.data.enrollments))
-      .catch(() => setList([]));
-  }, []);
-
-  if (!list)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <h4 className="page-title">Progress</h4>
+        <ErrorState
+          title="Couldn't load your progress"
+          message={error.message}
+          onRetry={reload}
+        />
       </Layout>
     );
 

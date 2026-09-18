@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarClock, ArrowRight } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import {
   kindMeta,
   dueLabel,
@@ -17,15 +18,10 @@ const TABS = ["todo", "submitted", "graded", "all"];
 const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
 
 export default function StudentAssignments() {
-  const [items, setItems] = useState(null);
   const [tab, setTab] = useState("todo");
-
-  useEffect(() => {
-    api
-      .get("/assessments/mine")
-      .then((r) => setItems(r.data.assessments))
-      .catch(() => setItems([]));
-  }, []);
+  const { status, data: items, error, reload } = useLoad(() =>
+    api.get("/assessments/mine").then((r) => r.data.assessments)
+  );
 
   const { counts, avg } = useMemo(() => {
     const c = { todo: 0, submitted: 0, graded: 0 };
@@ -42,10 +38,24 @@ export default function StudentAssignments() {
     };
   }, [items]);
 
-  if (!items)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <div className="asmt-head">
+          <h2>Assignments &amp; Quizzes</h2>
+        </div>
+        <ErrorState
+          title="Couldn't load your assignments"
+          message={error.message}
+          onRetry={reload}
+        />
       </Layout>
     );
 

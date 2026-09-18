@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, CourseThumb } from "@/shared/components/ui";
+import { CenterLoader, CourseThumb, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { StarsDisplay } from "@/shared/components/ui/Stars";
 import { useToast } from "@/shared/context/ToastContext";
@@ -20,7 +21,6 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function Catalog() {
   const toast = useToast();
-  const [data, setData] = useState(null); // { courses, total, page, pages, categories }
   const [mineIds, setMineIds] = useState(new Set());
   const [enrolling, setEnrolling] = useState(null);
 
@@ -34,24 +34,32 @@ export default function Catalog() {
   useEffect(() => setPage(1), [q, category, difficulty, sort]);
 
   useEffect(() => {
-    api.get("/enrollments/mine").then((r) => setMineIds(new Set(r.data.enrollments.map((e) => e.course._id)))).catch(() => {});
+    // Deliberately silent: this only decides whether a card reads "Enrolled"
+    // or offers the button. If it fails the button still works, and enrolling
+    // twice is refused by the server with a message — no need to break the
+    // catalog over it.
+    api
+      .get("/enrollments/mine")
+      .then((r) => setMineIds(new Set(r.data.enrollments.map((e) => e.course._id))))
+      .catch(() => {});
   }, []);
 
+  // Debounced separately from the load; useLoad handles the stale-response
+  // race that the old inline `cancelled` flag was guarding against.
+  const [query, setQuery] = useState("");
   useEffect(() => {
-    // the debounce doesn't stop a request already in flight, so an earlier
-    // slow response could land after a newer one and show stale results
-    let cancelled = false;
-    const t = setTimeout(() => {
+    const t = setTimeout(() => setQuery(q), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // { courses, total, page, pages, categories }
+  const { status, data, error, reload } = useLoad(
+    () =>
       api
-        .get("/courses", { params: { q, category, difficulty, sort, page, limit: 12 } })
-        .then((r) => !cancelled && setData(r.data))
-        .catch(() => !cancelled && setData({ courses: [], total: 0, page: 1, pages: 1, categories: [] }));
-    }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [q, category, difficulty, sort, page]);
+        .get("/courses", { params: { q: query, category, difficulty, sort, page, limit: 12 } })
+        .then((r) => r.data),
+    [query, category, difficulty, sort, page]
+  );
 
   const enroll = async (id) => {
     setEnrolling(id);
@@ -60,7 +68,7 @@ export default function Catalog() {
       toast("Enrolled");
       setMineIds((s) => new Set([...s, id]));
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setEnrolling(null);
   };
@@ -109,7 +117,9 @@ export default function Catalog() {
         />
       </div>
 
-      {!data ? (
+      {status === "error" ? (
+        <ErrorState title="Couldn't load the catalog" message={error.message} onRetry={reload} />
+      ) : !data ? (
         <CenterLoader />
       ) : data.courses.length === 0 ? (
         <p className="text-muted">No courses match your filters.</p>

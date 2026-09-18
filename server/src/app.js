@@ -1,8 +1,13 @@
 const express = require("express");
 const cors = require("cors");
+const requestId = require("./shared/middleware/requestId");
 const { notFound, errorHandler } = require("./shared/middleware/error");
 
 const app = express();
+
+// First in the stack, so even a request rejected by CORS or the body parser
+// carries an id that ties the response to a log line.
+app.use(requestId);
 
 // Render terminates TLS at its proxy; without this req.ip is the proxy's
 // address and every user looks like one client to the rate limiters.

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Play,
@@ -13,7 +12,8 @@ import {
 } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { Bar, CenterLoader, CourseThumb, Stat, Ring } from "@/shared/components/ui";
+import { Bar, CenterLoader, CourseThumb, ErrorState, Stat, Ring } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { StarsDisplay } from "@/shared/components/ui/Stars";
 import { useAuth } from "@/features/auth/AuthContext";
 import { typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
@@ -28,36 +28,44 @@ const STATUS_TAG = { open: "tag-outline", answered: "tag-accent", resolved: "tag
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [enr, setEnr] = useState(null);
-  const [doubts, setDoubts] = useState([]);
-  const [discover, setDiscover] = useState([]);
-  const [due, setDue] = useState(null); // null = still loading
+  // Enrolments gate the page — everything below is derived from them. The
+  // other three fill their own panels and report their own failure, so one
+  // dead endpoint no longer turns the whole dashboard into a blank slate.
+  const enrLoad = useLoad(() => api.get("/enrollments/mine").then((r) => r.data.enrollments));
+  const doubtLoad = useLoad(() => api.get("/doubts/mine").then((r) => r.data.doubts.slice(0, 3)));
+  const discoverLoad = useLoad(() =>
+    api.get("/courses", { params: { sort: "rating", limit: 8 } }).then((r) => r.data.courses)
+  );
+  // "Due soon" — unsubmitted work that has a deadline, soonest first
+  const dueLoad = useLoad(() =>
+    api.get("/assessments/mine").then((r) =>
+      r.data.assessments
+        .filter((a) => !a.submission && a.dueAt)
+        .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
+        .slice(0, 4)
+    )
+  );
 
-  useEffect(() => {
-    api.get("/enrollments/mine").then((r) => setEnr(r.data.enrollments)).catch(() => setEnr([]));
-    api.get("/doubts/mine").then((r) => setDoubts(r.data.doubts.slice(0, 3))).catch(() => {});
-    api
-      .get("/courses", { params: { sort: "rating", limit: 8 } })
-      .then((r) => setDiscover(r.data.courses))
-      .catch(() => {});
-    // "Due soon" — unsubmitted work that has a deadline, soonest first
-    api
-      .get("/assessments/mine")
-      .then((r) =>
-        setDue(
-          r.data.assessments
-            .filter((a) => !a.submission && a.dueAt)
-            .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
-            .slice(0, 4)
-        )
-      )
-      .catch(() => setDue([]));
-  }, []);
+  const enr = enrLoad.data;
+  const doubts = doubtLoad.data || [];
+  const discover = discoverLoad.data || [];
+  const due = dueLoad.data;
 
-  if (!enr)
+  if (enrLoad.status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (enrLoad.status === "error")
+    return (
+      <Layout>
+        <ErrorState
+          title="Couldn't load your dashboard"
+          message={enrLoad.error.message}
+          onRetry={enrLoad.reload}
+        />
       </Layout>
     );
 
@@ -229,7 +237,13 @@ export default function Dashboard() {
             <MessageCircleQuestion />
             <h4>Your doubts</h4>
           </div>
-          {doubts.length === 0 ? (
+          {doubtLoad.status === "error" ? (
+            <ErrorState
+              compact
+              title="Couldn't load your doubts"
+              onRetry={doubtLoad.reload}
+            />
+          ) : doubts.length === 0 ? (
             <p className="muted-sm">
               No questions yet. Use “Ask a doubt” inside a lesson.
             </p>
@@ -263,7 +277,9 @@ export default function Dashboard() {
             <CalendarClock />
             <h4>Due soon</h4>
           </div>
-          {!due ? (
+          {dueLoad.status === "error" ? (
+            <ErrorState compact title="Couldn't load what's due" onRetry={dueLoad.reload} />
+          ) : !due ? (
             <div className="card elev-sm" style={{ padding: "12px 14px" }}>
               <div className="muted-sm">Loading…</div>
             </div>

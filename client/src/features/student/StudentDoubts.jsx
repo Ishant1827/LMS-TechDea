@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 
 const STATUS_TAG = {
   open: "tag-outline",
@@ -14,19 +14,22 @@ const fmtDate = (d) =>
   new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export default function StudentDoubts() {
-  const [doubts, setDoubts] = useState(null);
+  const { status, data: doubts, error, reload } = useLoad(() =>
+    api.get("/doubts/mine").then((r) => r.data.doubts)
+  );
 
-  useEffect(() => {
-    api
-      .get("/doubts/mine")
-      .then((r) => setDoubts(r.data.doubts))
-      .catch(() => setDoubts([]));
-  }, []);
-
-  if (!doubts)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <h2 className="page-title">Doubts</h2>
+        <ErrorState title="Couldn't load your doubts" message={error.message} onRetry={reload} />
       </Layout>
     );
 

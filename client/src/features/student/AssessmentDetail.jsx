@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, CheckCircle2, XCircle } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { kindMeta, fmtDateTime } from "@/shared/lib/assessments";
@@ -109,7 +110,7 @@ function AttemptForm({ a, onDone }) {
   const send = async (auto = false) => {
     if (submittedRef.current) return;
     if (a.kind === "assignment" && !text.trim() && !link.trim()) {
-      toast("Write an answer or paste a link first");
+      toast("Write an answer or paste a link first", "error");
       return;
     }
     if (!auto && a.kind === "quiz" && answered < total) {
@@ -132,7 +133,7 @@ function AttemptForm({ a, onDone }) {
       onDone(data.submission);
     } catch (e) {
       submittedRef.current = false;
-      toast(e.message);
+      toast(e.message, "error");
       setBusy(false);
     }
   };
@@ -243,38 +244,41 @@ function AttemptForm({ a, onDone }) {
 export default function AssessmentDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [data, setData] = useState(null); // { a, sub } | { error }
-
-  const fetchOne = () =>
-    api
-      .get(`/assessments/${id}`)
-      .then((r) => setData({ a: r.data.assessment, sub: r.data.submission }))
-      .catch(() => setData({ error: true }));
-
-  useEffect(() => {
-    setData(null);
-    fetchOne();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // { a, sub }
+  const { status, data, error, reload } = useLoad(
+    () =>
+      api
+        .get(`/assessments/${id}`)
+        .then((r) => ({ a: r.data.assessment, sub: r.data.submission })),
+    [id]
+  );
 
   // A quiz's answer key is only revealed after an attempt — re-fetch so the
   // review renders correctly.
-  const finish = () => fetchOne();
+  const finish = () => reload();
 
-  if (!data)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
       </Layout>
     );
 
-  if (data.error)
+  if (status === "error")
     return (
       <Layout>
         <button className="back" onClick={() => nav("/assignments")}>
           <ArrowLeft /> Assignments
         </button>
-        <p className="muted-sm">Couldn't load this — it may have been removed or unpublished.</p>
+        {error.status === 404 || error.status === 403 ? (
+          <p className="muted-sm">Couldn't load this — it may have been removed or unpublished.</p>
+        ) : (
+          <ErrorState
+            title="Couldn't load this assignment"
+            message={error.message}
+            onRetry={reload}
+          />
+        )}
       </Layout>
     );
 

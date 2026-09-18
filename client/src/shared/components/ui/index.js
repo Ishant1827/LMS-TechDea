@@ -6,5 +6,6 @@ export { Bar } from "./Bar";
 export { Ring } from "./Ring";
 export { Stat } from "./Stat";
 export { BootLoader, CenterLoader } from "./Loaders";
+export { ErrorState } from "./ErrorState";
 export { CourseThumb } from "./CourseThumb";
 export { VideoPlaceholder } from "./VideoPlaceholder";

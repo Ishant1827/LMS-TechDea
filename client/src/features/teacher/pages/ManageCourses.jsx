@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Users, Trash2, Plus, Pencil } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -17,17 +17,13 @@ export default function ManageCourses() {
   const toast = useToast();
   const confirm = useConfirm();
   const narrow = useIsNarrow();
-  const [list, setList] = useState(null);
-
-  const load = () =>
-    api
-      .get("/courses/manage")
-      .then((r) => setList(r.data.courses))
-      .catch(() => setList([]));
-
-  useEffect(() => {
-    load();
-  }, []);
+  const {
+    status,
+    data: list,
+    error,
+    reload,
+    setData: setList,
+  } = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
 
   const togglePublish = async (c) => {
     try {
@@ -35,7 +31,7 @@ export default function ManageCourses() {
       setList((l) => l.map((x) => (x._id === c._id ? { ...x, published: data.course.published } : x)));
       toast(data.course.published ? "Course published" : "Moved to draft");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -63,14 +59,22 @@ export default function ManageCourses() {
       setList((l) => l.filter((x) => x._id !== c._id));
       toast("Course deleted");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
-  if (!list)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <h2 className="page-title">Manage Courses</h2>
+        <ErrorState title="Couldn't load your courses" message={error.message} onRetry={reload} />
       </Layout>
     );
 

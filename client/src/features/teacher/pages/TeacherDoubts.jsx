@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 
@@ -65,19 +66,15 @@ function DoubtCard({ d, onSave }) {
 
 export default function TeacherDoubts() {
   const toast = useToast();
-  const [doubts, setDoubts] = useState(null);
   const [tab, setTab] = useState("open");
   const [courseId, setCourseId] = useState("");
-
-  const load = () =>
-    api
-      .get("/doubts/teaching")
-      .then((r) => setDoubts(r.data.doubts))
-      .catch(() => setDoubts([]));
-
-  useEffect(() => {
-    load();
-  }, []);
+  const {
+    status,
+    data: doubts,
+    error,
+    reload,
+    setData: setDoubts,
+  } = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts));
 
   const save = async (id, patch) => {
     try {
@@ -85,7 +82,7 @@ export default function TeacherDoubts() {
       setDoubts((ds) => ds.map((x) => (x._id === id ? data.doubt : x)));
       toast(patch.status === "resolved" ? "Marked resolved" : "Answer saved");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -95,10 +92,22 @@ export default function TeacherDoubts() {
     return [...m.entries()];
   }, [doubts]);
 
-  if (!doubts)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (status === "error")
+    return (
+      <Layout>
+        <h2 className="page-title">Doubts</h2>
+        <ErrorState
+          title="Couldn't load student doubts"
+          message={error.message}
+          onRetry={reload}
+        />
       </Layout>
     );
 

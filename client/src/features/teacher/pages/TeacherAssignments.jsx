@@ -14,7 +14,8 @@ import {
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import Modal from "@/shared/components/ui/Modal";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
@@ -57,7 +58,7 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
   };
 
   const save = async () => {
-    if (!f.title.trim()) return toast("Give it a title");
+    if (!f.title.trim()) return toast("Give it a title", "error");
     const payload = {
       title: f.title.trim(),
       instructions: f.instructions,
@@ -77,7 +78,7 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
         }))
         .filter((q) => q.text && q.options.length >= 2);
       if (f.published && !payload.questions.length) {
-        return toast("Add at least one complete question before publishing");
+        return toast("Add at least one complete question before publishing", "error");
       }
     }
     setBusy(true);
@@ -88,7 +89,7 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
       onSaved(data.assessment);
       toast(edit ? "Saved" : `${label} created`);
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
       setBusy(false);
     }
   };
@@ -284,7 +285,7 @@ function GradeRow({ a, sub, onGraded }) {
       onGraded(data.submission);
       toast("Grade saved");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setBusy(false);
   };
@@ -411,14 +412,10 @@ function GradeRow({ a, sub, onGraded }) {
 
 /* ══ submissions inbox ═══════════════════════════════════════════════════ */
 function SubmissionsInbox({ assessmentId, onClose }) {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    api
-      .get(`/assessments/${assessmentId}/submissions`)
-      .then((r) => setData(r.data))
-      .catch(() => setData({ error: true }));
-  }, [assessmentId]);
+  const { status, data, error, reload, setData } = useLoad(
+    () => api.get(`/assessments/${assessmentId}/submissions`).then((r) => r.data),
+    [assessmentId]
+  );
 
   const patch = (s) =>
     setData((d) => ({
@@ -431,10 +428,15 @@ function SubmissionsInbox({ assessmentId, onClose }) {
 
   return (
     <Modal title={a ? `Submissions · ${a.title}` : "Submissions"} onClose={onClose} wide>
-      {!data ? (
+      {status === "error" ? (
+        <ErrorState
+          compact
+          title="Couldn't load submissions"
+          message={error.message}
+          onRetry={reload}
+        />
+      ) : !data ? (
         <CenterLoader />
-      ) : data.error ? (
-        <p className="muted-sm">Couldn't load submissions.</p>
       ) : (
         <>
           <div className="inbox-stats">
@@ -484,31 +486,29 @@ function SubmissionsInbox({ assessmentId, onClose }) {
 export default function TeacherAssignments() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [courses, setCourses] = useState(null);
+
   const [courseId, setCourseId] = useState("");
-  const [list, setList] = useState(null);
+
   const [builder, setBuilder] = useState(null); // { kind, existing? }
   const [inboxId, setInboxId] = useState(null);
 
-  useEffect(() => {
-    api
-      .get("/courses/manage")
-      .then((r) => {
-        setCourses(r.data.courses);
-        if (r.data.courses[0]) setCourseId(r.data.courses[0]._id);
-      })
-      .catch(() => setCourses([]));
-  }, []);
+  const courseLoad = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
+  const courses = courseLoad.data;
 
-  const loadList = () => {
-    if (!courseId) return;
-    setList(null);
-    api
-      .get("/assessments", { params: { courseId } })
-      .then((r) => setList(r.data.assessments))
-      .catch(() => setList([]));
-  };
-  useEffect(loadList, [courseId]);
+  // Default to the first course once they arrive.
+  useEffect(() => {
+    if (!courseId && courses?.[0]) setCourseId(courses[0]._id);
+  }, [courses, courseId]);
+
+  const listLoad = useLoad(
+    () =>
+      courseId
+        ? api.get("/assessments", { params: { courseId } }).then((r) => r.data.assessments)
+        : Promise.resolve(null),
+    [courseId]
+  );
+  const list = listLoad.data;
+  const setList = listLoad.setData;
 
   const upsert = (a) => {
     setList((l) => {
@@ -526,7 +526,7 @@ export default function TeacherAssignments() {
       setList((l) => l.map((x) => (x._id === a._id ? { ...x, published: data.assessment.published } : x)));
       toast(data.assessment.published ? "Published" : "Moved to draft");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -547,7 +547,7 @@ export default function TeacherAssignments() {
       setList((l) => l.filter((x) => x._id !== a._id));
       toast("Deleted");
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -561,10 +561,24 @@ export default function TeacherAssignments() {
     };
   }, [list]);
 
-  if (!courses)
+  if (courseLoad.status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (courseLoad.status === "error")
+    return (
+      <Layout>
+        <div className="asmt-head">
+          <h2>Assignments &amp; Quizzes</h2>
+        </div>
+        <ErrorState
+          title="Couldn't load your courses"
+          message={courseLoad.error.message}
+          onRetry={courseLoad.reload}
+        />
       </Layout>
     );
 
@@ -628,7 +642,13 @@ export default function TeacherAssignments() {
             </div>
           </div>
 
-          {!list ? (
+          {listLoad.status === "error" ? (
+            <ErrorState
+              title="Couldn't load this course's assignments"
+              message={listLoad.error.message}
+              onRetry={listLoad.reload}
+            />
+          ) : !list ? (
             <CenterLoader />
           ) : list.length === 0 ? (
             <div className="card elev-sm" style={{ alignItems: "flex-start" }}>

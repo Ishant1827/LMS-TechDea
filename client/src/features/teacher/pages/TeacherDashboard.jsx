@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -17,7 +16,8 @@ import {
 } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, Stat } from "@/shared/components/ui";
+import { CenterLoader, ErrorState, Stat } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { useAuth } from "@/features/auth/AuthContext";
 import { initials } from "@/shared/lib/format";
 
@@ -41,20 +41,31 @@ const JUMP = [
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
-  const [courses, setCourses] = useState(null);
-  const [doubts, setDoubts] = useState([]);
-  const [students, setStudents] = useState(null);
+  // Courses gate the page; the other two fill panels and fail on their own so
+  // one dead endpoint doesn't blank a dashboard that is otherwise fine.
+  const courseLoad = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
+  const doubtLoad = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts));
+  const studentLoad = useLoad(() => api.get("/students").then((r) => r.data.students));
 
-  useEffect(() => {
-    api.get("/courses/manage").then((r) => setCourses(r.data.courses)).catch(() => setCourses([]));
-    api.get("/doubts/teaching").then((r) => setDoubts(r.data.doubts)).catch(() => {});
-    api.get("/students").then((r) => setStudents(r.data.students)).catch(() => {});
-  }, []);
+  const courses = courseLoad.data;
+  const doubts = doubtLoad.data || [];
+  const students = studentLoad.data;
 
-  if (!courses)
+  if (courseLoad.status === "loading")
     return (
       <Layout>
         <CenterLoader />
+      </Layout>
+    );
+
+  if (courseLoad.status === "error")
+    return (
+      <Layout>
+        <ErrorState
+          title="Couldn't load your dashboard"
+          message={courseLoad.error.message}
+          onRetry={courseLoad.reload}
+        />
       </Layout>
     );
 
@@ -98,7 +109,7 @@ export default function TeacherDashboard() {
           tone="success"
           value={students ? students.length : "—"}
           label="Students"
-          hint={stalled ? `${stalled} stalled` : "all active"}
+          hint={studentLoad.status === "error" ? "count unavailable" : stalled ? `${stalled} stalled` : "all active"}
           to="/teach/students"
         />
         <Stat
@@ -129,7 +140,14 @@ export default function TeacherDashboard() {
             </Link>
           </div>
 
-          {doubts.length === 0 ? (
+          {doubtLoad.status === "error" ? (
+            <ErrorState
+              compact
+              title="Couldn't load doubts"
+              message={doubtLoad.error.message}
+              onRetry={doubtLoad.reload}
+            />
+          ) : doubts.length === 0 ? (
             <div className="card elev-sm quiet-note">
               <BookOpen />
               <div>

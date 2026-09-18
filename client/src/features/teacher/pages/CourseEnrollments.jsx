@@ -1,35 +1,42 @@
-import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { Bar, CenterLoader } from "@/shared/components/ui";
+import { Bar, CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import { useIsNarrow } from "@/shared/hooks/useMediaQuery";
 
 export default function CourseEnrollments() {
   const { id } = useParams();
   const narrow = useIsNarrow();
-  const [data, setData] = useState(null);
+  const { status, data, error, reload } = useLoad(
+    () => api.get(`/courses/${id}/enrollments`).then((r) => r.data),
+    [id]
+  );
 
-  useEffect(() => {
-    api
-      .get(`/courses/${id}/enrollments`)
-      .then((r) => setData(r.data))
-      .catch(() => setData({ error: true }));
-  }, [id]);
-
-  if (!data)
+  if (status === "loading")
     return (
       <Layout>
         <CenterLoader />
       </Layout>
     );
 
-  if (data.error)
+  if (status === "error")
     return (
       <Layout>
-        <h3>Not available</h3>
-        <Link className="btn btn-secondary" to="/manage" style={{ width: "fit-content" }}>
+        {error.status === 404 || error.status === 403 ? (
+          <>
+            <h3>Not available</h3>
+            <p className="text-muted">This course isn't yours, or no longer exists.</p>
+          </>
+        ) : (
+          <ErrorState
+            title="Couldn't load enrolments"
+            message={error.message}
+            onRetry={reload}
+          />
+        )}
+        <Link className="btn btn-secondary" to="/manage" style={{ width: "fit-content", marginTop: 14 }}>
           Back
         </Link>
       </Layout>

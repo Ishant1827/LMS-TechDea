@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader } from "@/shared/components/ui";
+import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
@@ -14,27 +15,30 @@ export default function AdminUsers() {
   const toast = useToast();
   const confirm = useConfirm();
   const narrow = useIsNarrow();
-  const [users, setUsers] = useState(null);
   const [roleFilter, setRoleFilter] = useState("");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState({ name: "", email: "", password: "", role: "teacher" });
 
-  const load = () => {
+  // Debounce the search box on its own, so the load itself keys off a settled
+  // query rather than every keystroke.
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(q.trim()), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const {
+    status,
+    data: users,
+    error,
+    reload: load,
+  } = useLoad(() => {
     const params = {};
     if (roleFilter) params.role = roleFilter;
-    if (q.trim()) params.q = q.trim();
-    api
-      .get("/users", { params })
-      .then((r) => setUsers(r.data.users))
-      .catch(() => setUsers([]));
-  };
-
-  useEffect(() => {
-    const t = setTimeout(load, 250);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleFilter, q]);
+    if (query) params.q = query;
+    return api.get("/users", { params }).then((r) => r.data.users);
+  }, [roleFilter, query]);
 
   const create = async (e) => {
     e.preventDefault();
@@ -45,7 +49,7 @@ export default function AdminUsers() {
       setDraft({ name: "", email: "", password: "", role: "teacher" });
       load();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
     setCreating(false);
   };
@@ -56,7 +60,7 @@ export default function AdminUsers() {
       toast("Role updated");
       load();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -65,7 +69,7 @@ export default function AdminUsers() {
       await api.patch(`/users/${u._id}/active`, { active: !u.active });
       load();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -83,7 +87,7 @@ export default function AdminUsers() {
       toast("User deleted");
       load();
     } catch (e) {
-      toast(e.message);
+      toast(e.message, "error");
     }
   };
 
@@ -152,7 +156,9 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {!users ? (
+      {status === "error" ? (
+        <ErrorState title="Couldn't load users" message={error.message} onRetry={load} />
+      ) : !users ? (
         <CenterLoader />
       ) : narrow ? (
         /* The 6-column table pushed the role picker and both action buttons
