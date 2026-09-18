@@ -4,6 +4,7 @@
   "private": true,
   "description": "TechDea LMS — workspace root. Convenience scripts only; the real packages are client/ and server/.",
   "scripts": {
+    "create:admin": "npm --prefix server run create:admin",
     "install:all": "npm --prefix server install && npm --prefix client install",
     "dev:api": "npm --prefix server run dev",
     "dev:web": "npm --prefix client run dev",

@@ -35,6 +35,7 @@ controller and Mongoose model together**.
 
 ```
 server/
+├── scripts/create-admin.js         creates the first admin; nothing else
 └── src/
     ├── index.js                    process bootstrap (env, DB, listen)
     ├── app.js                      express wiring + route mounts  ← start here
@@ -146,6 +147,7 @@ in the cascade at an unpredictable point.
 cd server
 npm install
 cp .env.example .env        # then edit MONGO_URI / JWT_SECRET if needed
+npm run create:admin        # first run only — creates the one admin account
 npm run dev                 # http://localhost:5000
 
 # 2. Web app (second terminal)
@@ -161,6 +163,7 @@ delegate to the two packages — there is nothing to `npm install` at the root):
 npm run install:all   # npm install in both client and server
 npm run dev:api       # = npm --prefix server run dev
 npm run dev:web       # = npm --prefix client run dev
+npm run create:admin  # = npm --prefix server run create:admin
 npm run build         # = npm --prefix client run build
 ```
 
