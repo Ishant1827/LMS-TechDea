@@ -5,7 +5,6 @@
   "description": "TechDea LMS API — Express + MongoDB",
   "main": "src/index.js",
   "scripts": {
-    "create:admin": "node scripts/create-admin.js",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "mail:smoke": "node scripts/mail-smoke.js",
