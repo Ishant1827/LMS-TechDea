@@ -977,20 +977,3 @@
 @media (max-width: 470px) {
   .form-actions .muted-sm { margin-left: 0; width: 100%; }
 }
-
-/* A value shown rather than edited — the current email on the profile page.
-   Deliberately not a disabled <input>: a greyed-out box invites clicking and
-   then does nothing, which reads as broken rather than as deliberate. */
-.static-field {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--color-soft);
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-  font-size: 15px;
-  word-break: break-all;
-}
-.static-field > svg { width: 16px; height: 16px; flex: none; color: var(--color-muted); }

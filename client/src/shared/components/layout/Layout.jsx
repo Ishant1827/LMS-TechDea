@@ -14,7 +14,6 @@ import {
 import { useAuth } from "@/features/auth/AuthContext";
 import AccountMenu from "@/shared/components/layout/AccountMenu";
 import Brand from "@/shared/components/layout/Brand";
-import VerifyBanner from "@/features/auth/components/VerifyBanner";
 import { initials, cap } from "@/shared/lib/format";
 import { roleHome } from "@/shared/lib/roles";
 
@@ -130,10 +129,7 @@ export default function Layout({ children, bodyClass = "" }) {
           <span className="spacer" />
           <AccountMenu />
         </header>
-        <main className={"body " + bodyClass}>
-          <VerifyBanner />
-          {children}
-        </main>
+        <main className={"body " + bodyClass}>{children}</main>
       </div>
     </div>
   );

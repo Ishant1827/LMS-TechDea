@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const User = require("../../modules/users/User.model");
-const { mailEnabled } = require("../mail/config");
 
 function readToken(req) {
   const header = req.headers.authorization || "";
@@ -72,35 +71,6 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-// The enforcement half of the soft gate. The client also hides these actions,
-// but that is decoration — R1: the client's checks are UX, the rule lives here.
-//
-// 403 with a distinguishable code, not 401: the session is perfectly valid, and
-// signing out and back in would not help. The client keys its prompt off `code`
-// rather than matching on the message text.
-function requireVerified(req, res, next) {
-  if (!req.user) return res.status(401).json({ message: "Please sign in" });
-
-  // No mail configured means no code can be sent, so asking for one would be a
-  // demand nobody can satisfy — every new student would be told to confirm an
-  // address using a message that will never arrive. The gate stands down with
-  // the channel it depends on.
-  if (!mailEnabled()) return next();
-
-  // Staff accounts are created by an admin, not self-registered, so there is no
-  // signup flow in which they could have verified. Gating them would lock a
-  // teacher out of their own course over a check aimed at roster hygiene.
-  if (req.user.role !== "student") return next();
-
-  if (!req.user.emailVerifiedAt) {
-    return res.status(403).json({
-      code: "EMAIL_NOT_VERIFIED",
-      message: "Confirm your email address first — we sent you a code.",
-    });
-  }
-  next();
-}
-
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
@@ -110,4 +80,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { protect, optionalAuth, requireRole, requireVerified };
+module.exports = { protect, optionalAuth, requireRole };

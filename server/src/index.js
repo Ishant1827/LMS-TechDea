@@ -2,37 +2,14 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const { logFatal } = require("./shared/utils/logger");
-const { assertMailConfig, mailEnabled } = require("./shared/mail/config");
-const { verifyTransport, closeTransport } = require("./shared/mail/transport");
-const { assertOtpConfig } = require("./modules/auth/otp.service");
 const app = require("./app");
 
 const PORT = process.env.PORT || 5000;
 const SHUTDOWN_GRACE_MS = 10_000;
 
-// Mail configuration is validated before anything else starts. A bad setting
-// must be a failed boot with a readable reason, not a surprise on the first
-// password reset someone genuinely needs.
-try {
-  assertMailConfig();
-  // One-time codes only exist to be emailed, so with mail off the pepper is not
-  // needed and demanding it would be a variable to set for a feature that is
-  // switched off.
-  if (mailEnabled()) assertOtpConfig();
-} catch (err) {
-  console.error(`Configuration is invalid: ${err.message}`);
-  process.exit(1);
-}
-
 connectDB()
   .then(() => {
     const server = app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
-    // Proves the credentials and the TLS handshake now rather than later. Mail
-    // being unreachable is not a reason to stop serving courses, so this only
-    // reports.
-    verifyTransport().then(({ ok, reason }) => {
-      if (!ok && reason !== "mail is disabled") console.warn(`[mail] transport check failed — ${reason}`);
-    });
     installShutdown(server);
   })
   .catch((err) => {
@@ -58,7 +35,6 @@ function installShutdown(server) {
 
     server.close(async () => {
       clearTimeout(force);
-      closeTransport();
       try {
         await mongoose.connection.close(false);
       } catch (e) {

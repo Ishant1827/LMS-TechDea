@@ -6,10 +6,10 @@ import Layout from "@/shared/components/layout/Layout";
 import PasswordInput from "@/shared/components/ui/PasswordInput";
 import { roleHome } from "@/shared/lib/roles";
 import { useAuth } from "@/features/auth/AuthContext";
-import EmailChangeCard from "@/features/account/EmailChangeCard";
 import { useToast } from "@/shared/context/ToastContext";
 import { initials, cap } from "@/shared/lib/format";
 
+const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
 
 export default function Profile() {
@@ -18,7 +18,7 @@ export default function Profile() {
   const nav = useNavigate();
   const goBack = () => (window.history.length > 1 ? nav(-1) : nav(roleHome(user.role)));
 
-  const [p, setP] = useState({ name: user.name, phone: user.phone || "" });
+  const [p, setP] = useState({ name: user.name, email: user.email, phone: user.phone || "" });
   const [touched, setTouched] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [err, setErr] = useState("");
@@ -38,6 +38,7 @@ export default function Profile() {
       : p.name.trim().length < 2
       ? "That name looks too short"
       : "",
+    email: !p.email.trim() ? "Email is required" : !emailOk(p.email) ? "Enter a valid email" : "",
     phone: phoneOk(p.phone) ? "" : "Enter a valid phone number",
   };
   const showErr = (k) => (touched[k] || submitted) && errors[k];
@@ -72,7 +73,10 @@ export default function Profile() {
   const blurPw = (k) => () => setPwTouched((t) => ({ ...t, [k]: true }));
 
   // Nothing to save until something actually differs from the stored account.
-  const dirty = p.name.trim() !== user.name || p.phone.trim() !== (user.phone || "");
+  const dirty =
+    p.name.trim() !== user.name ||
+    p.email.trim() !== user.email ||
+    p.phone.trim() !== (user.phone || "");
 
   const save = async (e) => {
     e.preventDefault();
@@ -81,15 +85,15 @@ export default function Profile() {
     if (Object.values(errors).some(Boolean)) return;
     setBusy(true);
     try {
-      // No email here — the address has its own flow, see EmailChangeCard.
       const { data } = await api.put("/auth/me", {
         name: p.name.trim(),
+        email: p.email.trim(),
         phone: p.phone.trim(),
       });
       patchUser(data.user);
       // re-seed the form from the server so the fields can never drift from
       // what was actually stored
-      setP({ name: data.user.name, phone: data.user.phone || "" });
+      setP({ name: data.user.name, email: data.user.email, phone: data.user.phone || "" });
       setTouched({});
       setSubmitted(false);
       toast("Changes saved");
@@ -100,7 +104,7 @@ export default function Profile() {
   };
 
   const reset = () => {
-    setP({ name: user.name, phone: user.phone || "" });
+    setP({ name: user.name, email: user.email, phone: user.phone || "" });
     setTouched({});
     setSubmitted(false);
     setErr("");
@@ -168,6 +172,26 @@ export default function Profile() {
           </div>
 
           <div className="field">
+            <label htmlFor="pf-email">Email</label>
+            <input
+              id="pf-email"
+              className={"input" + (showErr("email") ? " has-err" : "")}
+              type="email"
+              autoComplete="email"
+              value={p.email}
+              onChange={set("email")}
+              onBlur={blur("email")}
+            />
+            {showErr("email") ? (
+              <div className="field-err">{errors.email}</div>
+            ) : (
+              <div className="muted-sm" style={{ marginTop: 4 }}>
+                You sign in with this address.
+              </div>
+            )}
+          </div>
+
+          <div className="field">
             <label htmlFor="pf-phone">Phone</label>
             <input
               id="pf-phone"
@@ -197,8 +221,6 @@ export default function Profile() {
             <span className="muted-sm">{dirty ? "Unsaved changes" : "Everything saved"}</span>
           </div>
         </form>
-
-        <EmailChangeCard />
 
         <form onSubmit={changePw} className="card elev-sm" noValidate>
           <div className="card-kicker">Change password</div>

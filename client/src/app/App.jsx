@@ -7,7 +7,6 @@ import { roleHome } from "@/shared/lib/roles";
 import Login from "@/features/auth/pages/Login";
 import Signup from "@/features/auth/pages/Signup";
 import ForgotPassword from "@/features/auth/pages/ForgotPassword";
-import VerifyEmail from "@/features/auth/pages/VerifyEmail";
 import ForcePasswordChange from "@/features/auth/pages/ForcePasswordChange";
 
 // student
@@ -68,26 +67,14 @@ export default function App() {
 
   const home = user ? roleHome(user.role) : "/login";
 
-  // Registering signs the user in, which makes the /signup route below redirect
-  // immediately — racing the navigate() inside Signup. Rather than depend on
-  // which lands first, both are pointed at the same place.
-  //
-  // Only signup goes here. Sending an unverified student to the code screen on
-  // every *sign-in* would be a hard gate wearing a soft gate's clothes; there
-  // the banner does the asking.
-  const afterSignup =
-    user && user.role === "student" && !user.emailVerifiedAt ? "/verify-email" : home;
   const S = (el, roles) => <ProtectedRoute roles={roles}>{el}</ProtectedRoute>;
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={home} replace /> : <Login />} />
-      <Route path="/signup" element={user ? <Navigate to={afterSignup} replace /> : <Signup />} />
+      <Route path="/signup" element={user ? <Navigate to={home} replace /> : <Signup />} />
       <Route path="/forgot-password" element={user ? <Navigate to={home} replace /> : <ForgotPassword />} />
 
-      {/* Reachable signed in *or* out: the code arrives by email, and email is
-          often opened on a different device from the one that signed up. */}
-      <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* ── student workspace ─────────────────────────────── */}
       <Route path="/" element={S(<Dashboard />, student)} />

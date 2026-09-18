@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "@/features/auth/components/AuthLayout";
 import PasswordInput from "@/shared/components/ui/PasswordInput";
 import { useAuth } from "@/features/auth/AuthContext";
+import { roleHome } from "@/shared/lib/roles";
 
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
@@ -68,9 +69,7 @@ export default function Signup() {
         phone: form.phone.trim(),
         password: form.password,
       });
-      // Straight to the code rather than the dashboard: a code was just sent,
-      // and the one moment the user is certainly looking for it is now.
-      nav("/verify-email", { replace: true, state: { email: user.email, justSent: true } });
+      nav(roleHome(user.role), { replace: true });
     } catch (err) {
       setApiErr(err.message);
       setBusy(false);

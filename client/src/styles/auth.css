@@ -109,18 +109,6 @@
   margin-bottom: 14px;
 }
 
-/* Six digits, read back at a glance. Tracking and a tabular face stop 111111
-   from looking shorter than 000000 while it is being typed. */
-.otp-input {
-  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 8px;
-  text-align: center;
-  padding-left: 8px;
-}
-.otp-input::placeholder { letter-spacing: 8px; color: var(--color-neutral-400); }
-
 .field { margin-bottom: 12px; }
 
 .form-grid {
@@ -135,7 +123,6 @@ select.input { appearance: auto; background: #fff; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .chip-row .btn-ghost { padding: 4px 8px; min-height: auto; }
 .chip-row .btn svg { width: 14px; height: 14px; }
-
 
 .avatar.avatar-initials {
   display: grid;

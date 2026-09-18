@@ -342,30 +342,3 @@ a.plain { color: var(--color-text); text-decoration: none; }
   .flowbar .brand-word { display: none; }
   .flowbar .brand + * { border-left: 0; padding-left: 0; }
 }
-
-/* ── Unverified-email prompt ──────────────────────────────────────────────
-   Sits above the page content inside the shell. Accent rather than warning
-   colours on purpose: nothing is broken and nothing is lost, there is just a
-   step left to finish. A red banner on every screen reads as an error the user
-   caused. */
-.verify-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-  padding: 12px 14px;
-  background: var(--color-accent-100);
-  border: 1px solid var(--color-accent-200);
-  border-radius: var(--radius-md);
-  color: var(--color-accent-700);
-}
-.verify-banner > svg { width: 20px; height: 20px; flex: none; }
-.verify-banner-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.verify-banner-text strong { font-size: 14px; }
-.verify-banner-text span { font-size: 13px; color: var(--color-neutral-700); }
-.verify-banner .btn { flex: none; margin-left: auto; }
-
-@media (max-width: 640px) {
-  .verify-banner { align-items: flex-start; flex-wrap: wrap; }
-  .verify-banner .btn { margin-left: 0; width: 100%; justify-content: center; }
-}

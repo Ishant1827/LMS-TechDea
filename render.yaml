@@ -13,10 +13,8 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
-      # Explicit, not assumed. Several protections key off this: the console and
-      # json mail transports are refused in production precisely because they
-      # print message bodies — one-time codes included — into the log view. If
-      # NODE_ENV is anything else, that guard silently does not apply.
+      # Explicit, not assumed. Render sets it for Node services anyway, but
+      # behaviour that depends on it should not rest on a platform default.
       - key: NODE_ENV
         value: production
       - key: MONGO_URI          # MongoDB Atlas connection string (…/techdea_lms?…)
@@ -27,30 +25,6 @@ services:
         value: 7d
       - key: CLIENT_ORIGIN      # exact origin of the client, no trailing slash
         value: https://lms-client-szuv.onrender.com
-
-      - key: OTP_PEPPER         # 32+ random chars, keys the one-time codes
-        sync: false
-
-      # ── Email ──────────────────────────────────────────────────────
-      # There is no MAIL_TRANSPORT here on purpose. Unset means outbound email
-      # is disabled: the service boots and serves normally, any send is logged
-      # and skipped, and nothing is gated on a code nobody can receive.
-      # Password recovery is by admin — Admin > Users > Set password.
-      #
-      # Do not set MAIL_TRANSPORT=smtp. The SMTP transport is commented out
-      # (server/src/shared/mail/transport.js) because Render's free plan blocks
-      # outbound traffic to ports 25, 465 and 587, so it could never deliver
-      # from here. Setting it stops the boot with an explanation rather than
-      # silently sending nothing.
-      #
-      # console and json are refused in production — they write message bodies,
-      # one-time codes included, to the log view.
-      #
-      # To send mail again: restore a transport in transport.js (SMTP needs a
-      # host that does not block the port; an HTTP email API needs no port at
-      # all), then set MAIL_TRANSPORT and its credentials here.
-      - key: MAIL_LOGO_URL
-        value: https://lms-client-szuv.onrender.com/techdea-logo.png
 
   # ── Client ─────────────────────────────────────────────────────────────
   - type: web
