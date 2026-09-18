@@ -8,6 +8,7 @@ import Login from "@/features/auth/pages/Login";
 import Signup from "@/features/auth/pages/Signup";
 import ForgotPassword from "@/features/auth/pages/ForgotPassword";
 import VerifyEmail from "@/features/auth/pages/VerifyEmail";
+import ForcePasswordChange from "@/features/auth/pages/ForcePasswordChange";
 
 // student
 import Dashboard from "@/features/student/Dashboard";
@@ -58,6 +59,12 @@ export default function App() {
         </div>
       </div>
     );
+
+  // An account still carrying a password somebody else chose gets one screen and
+  // nothing else. The server refuses every other endpoint anyway (see protect),
+  // so routing them into the app would only show a dashboard whose every button
+  // fails. Above the route table on purpose: there is no URL around it.
+  if (user?.mustChangePassword) return <ForcePasswordChange />;
 
   const home = user ? roleHome(user.role) : "/login";
 

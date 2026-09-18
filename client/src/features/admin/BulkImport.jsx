@@ -182,6 +182,13 @@ export default function BulkImport({ onImported }) {
       setResult({ created, skipped });
       setRows([]);
       if (fileRef.current) fileRef.current.value = "";
+
+      // Saved without being asked, because these are shown exactly once and a
+      // closed tab loses them. The button stays for the case where a browser
+      // declines the automatic save — some do, if enough time has passed since
+      // the click that started this.
+      if (created.length) savePasswords(created);
+
       toast(`Created ${created.length} ${created.length === 1 ? "account" : "accounts"}`);
       onImported?.();
     } catch (e) {
@@ -208,11 +215,11 @@ export default function BulkImport({ onImported }) {
       ["Priya Singh", "priya.singh@example.com", ""],
     ]));
 
-  const downloadPasswords = () =>
+  const savePasswords = (people) =>
     download(
       `techdea-passwords-${new Date().toISOString().slice(0, 10)}.csv`,
       toCsv([["name", "email", "role", "password"],
-        ...result.created.map((c) => [c.name, c.email, c.role, c.password])])
+        ...people.map((c) => [c.name, c.email, c.role, c.password])])
     );
 
   return (
@@ -254,8 +261,8 @@ export default function BulkImport({ onImported }) {
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn btn-primary" onClick={downloadPasswords}>
-                  <Download /> Download passwords
+                <button type="button" className="btn btn-primary" onClick={() => savePasswords(result.created)}>
+                  <Download /> Download again
                 </button>
                 <button type="button" className="btn btn-ghost" onClick={reset}>Import another file</button>
               </div>

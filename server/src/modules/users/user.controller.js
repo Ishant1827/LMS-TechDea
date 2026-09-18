@@ -121,6 +121,10 @@ exports.setPassword = asyncHandler(async (req, res) => {
 
   await user.setPassword(password);
 
+  // Same reasoning as a bulk import: this is a password the admin chose, not one
+  // only its owner knows, so the account changes it on the way back in.
+  user.mustChangePassword = true;
+
   // Whoever was signed in as this account is signed out. If the reason for the
   // reset is a compromise, leaving the intruder's token alive would defeat it —
   // and if it is an ordinary lockout, the user is signed in nowhere anyway.
@@ -266,7 +270,10 @@ exports.bulkCreate = asyncHandler(async (req, res) => {
       continue;
     }
     const password = generatePassword(c.name);
-    const user = new User({ name: c.name, email: c.email, role: c.role });
+    // The password below is derived from their name and is therefore guessable
+    // by anyone who knows it. The account is held to a password change on first
+    // sign-in until they replace it with one only they know.
+    const user = new User({ name: c.name, email: c.email, role: c.role, mustChangePassword: true });
     await user.setPassword(password);
     // Left unverified: an address asserted by an admin has not been proved by
     // the person who owns it. Staff are not gated on this, and students are not

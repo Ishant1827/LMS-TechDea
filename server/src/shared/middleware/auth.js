@@ -7,6 +7,17 @@ function readToken(req) {
   return header.startsWith("Bearer ") ? header.slice(7) : null;
 }
 
+// The only things an account may do while it is still carrying a password
+// somebody else chose. Deliberately tiny, and an allowlist rather than a
+// blocklist: anything added to the API later is refused until it is considered.
+const DURING_FORCED_CHANGE = new Set([
+  "GET /api/auth/me",
+  "PUT /api/auth/me/password",
+]);
+
+const wayThrough = (req) =>
+  DURING_FORCED_CHANGE.has(`${req.method} ${req.originalUrl.split("?")[0].replace(/\/+$/, "")}`);
+
 // Require a valid token. Populates req.user.
 async function protect(req, res, next) {
   try {
@@ -24,6 +35,17 @@ async function protect(req, res, next) {
     // version 0, which is what every existing account already has.
     if ((payload.tv ?? 0) !== (user.tokenVersion || 0)) {
       return res.status(401).json({ message: "Your session has ended — sign in again" });
+    }
+
+    // A password chosen by an admin is not yet a password only this person
+    // knows, so the account is held here until they replace it. 403 with a code
+    // the client can branch on, not 401: the session is perfectly valid and
+    // signing out would not help.
+    if (user.mustChangePassword && !wayThrough(req)) {
+      return res.status(403).json({
+        code: "PASSWORD_CHANGE_REQUIRED",
+        message: "Choose your own password before you carry on.",
+      });
     }
 
     req.user = user;

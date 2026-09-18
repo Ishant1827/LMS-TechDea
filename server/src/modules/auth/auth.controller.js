@@ -195,6 +195,9 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   // unverified account is verified by having completed this.
   if (!user.emailVerifiedAt) user.emailVerifiedAt = new Date();
 
+  // They chose this one themselves, so any forced-change hold is done.
+  user.mustChangePassword = false;
+
   await user.save();
 
   void notify("auth.password.changed", {
@@ -269,6 +272,9 @@ exports.changePassword = asyncHandler(async (req, res) => {
   // password, so they are handed a token on the new version rather than being
   // signed out of the tab they are typing in.
   req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+  // Whatever brought them here — an import, an admin reset — the password is now
+  // one only they know, so the hold is lifted.
+  req.user.mustChangePassword = false;
   await req.user.save();
 
   void notify("auth.password.changed", {

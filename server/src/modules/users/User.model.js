@@ -43,6 +43,16 @@ const userSchema = new mongoose.Schema(
     // comes back, it is an unverified claim, and writing it into `email` would
     // hand account recovery to whoever made the claim.
     pendingEmail: { type: String, default: "", lowercase: true, trim: true },
+
+    // Set on accounts whose password somebody else chose — a bulk import, where
+    // the password is derived from the person's own name and is therefore
+    // guessable by anyone who knows it (G27). Until it is cleared, the account
+    // can do exactly two things: read itself and change its password.
+    //
+    // Enforced in `protect`, not in a middleware each router has to remember to
+    // add, so a new endpoint is covered the day it is written rather than the
+    // day somebody notices.
+    mustChangePassword: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
