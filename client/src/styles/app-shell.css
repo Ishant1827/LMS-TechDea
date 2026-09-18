@@ -230,6 +230,8 @@ a.plain { color: var(--color-text); text-decoration: none; }
 .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
   background: var(--color-neutral-900); color: #fff; padding: 11px 18px; font-size: 13px;
   font-weight: 600; z-index: 80; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+/* failures read as failures — same position, unmistakably different colour */
+.toast--error { background: var(--color-danger); }
 
 /* ── Loading states ──────────────────────────────────────────────────────────
    Shimmer skeletons for route changes, a violet spinner (matching
@@ -262,6 +264,11 @@ a.plain { color: var(--color-text); text-decoration: none; }
 .loader-screen--boot .brand-word { font-size: 22px; }
 .loader-screen--boot .brand-mark { width: 44px; height: 44px; }
 .loader-screen--boot .brand-tag { font-size: 11.5px; }
+
+/* render-crash fallback (ErrorBoundary) — plain markup, no app chrome */
+.boundary-card { max-width: 420px; padding: 0 20px; text-align: center; }
+.boundary-card p { margin: 8px 0 18px; font-size: 13.5px; }
+.boundary-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 /* pending button — spinner replaces the label, no layout shift */
 .btn.is-loading { position: relative; pointer-events: none; color: transparent !important; }
@@ -334,4 +341,31 @@ a.plain { color: var(--color-text); text-decoration: none; }
   .body { padding: 18px 14px; }
   .flowbar .brand-word { display: none; }
   .flowbar .brand + * { border-left: 0; padding-left: 0; }
+}
+
+/* ── Unverified-email prompt ──────────────────────────────────────────────
+   Sits above the page content inside the shell. Accent rather than warning
+   colours on purpose: nothing is broken and nothing is lost, there is just a
+   step left to finish. A red banner on every screen reads as an error the user
+   caused. */
+.verify-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: 12px 14px;
+  background: var(--color-accent-100);
+  border: 1px solid var(--color-accent-200);
+  border-radius: var(--radius-md);
+  color: var(--color-accent-700);
+}
+.verify-banner > svg { width: 20px; height: 20px; flex: none; }
+.verify-banner-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.verify-banner-text strong { font-size: 14px; }
+.verify-banner-text span { font-size: 13px; color: var(--color-neutral-700); }
+.verify-banner .btn { flex: none; margin-left: auto; }
+
+@media (max-width: 640px) {
+  .verify-banner { align-items: flex-start; flex-wrap: wrap; }
+  .verify-banner .btn { margin-left: 0; width: 100%; justify-content: center; }
 }

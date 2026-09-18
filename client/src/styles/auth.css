@@ -97,6 +97,30 @@
   margin-bottom: 14px;
 }
 
+/* The quieter sibling of .form-error: an outcome worth stating, not a failure.
+   Used for the resend confirmation, which is deliberately non-committal. */
+.form-note {
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  border: 1px solid var(--color-accent-200);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* Six digits, read back at a glance. Tracking and a tabular face stop 111111
+   from looking shorter than 000000 while it is being typed. */
+.otp-input {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 8px;
+  text-align: center;
+  padding-left: 8px;
+}
+.otp-input::placeholder { letter-spacing: 8px; color: var(--color-neutral-400); }
+
 .field { margin-bottom: 12px; }
 
 .form-grid {

@@ -922,6 +922,25 @@
 .quiet-note b { display: block; font-size: 13px; }
 .quiet-note span { font-size: 12px; color: var(--color-muted); }
 
+/* a load that failed — same shape as .quiet-note, but it reads as a problem
+   rather than an absence, because the two used to look identical */
+.error-state {
+  flex-direction: row; align-items: center; gap: 12px; padding: 15px 16px;
+  border-style: dashed; border-color: #f0cccc; background: #fdf6f6;
+}
+.error-state > svg { width: 20px; height: 20px; color: var(--color-danger); flex: none; }
+.error-state-text { flex: 1; min-width: 0; }
+.error-state-text b { display: block; font-size: 13px; }
+.error-state-text span { font-size: 12px; color: var(--color-muted); }
+.error-state-retry { flex: none; padding: 7px 12px; font-size: 12.5px; }
+.error-state-retry svg { width: 14px; height: 14px; }
+.error-state--compact { padding: 11px 13px; }
+
+@media (max-width: 470px) {
+  .error-state { flex-wrap: wrap; }
+  .error-state-retry { width: 100%; justify-content: center; }
+}
+
 /* Two tiles across a phone leaves ~76px for the text once the icon chip is in,
    which clipped "Lessons done". Trim the chrome and let the label wrap. */
 @media (max-width: 470px) {
@@ -958,3 +977,20 @@
 @media (max-width: 470px) {
   .form-actions .muted-sm { margin-left: 0; width: 100%; }
 }
+
+/* A value shown rather than edited — the current email on the profile page.
+   Deliberately not a disabled <input>: a greyed-out box invites clicking and
+   then does nothing, which reads as broken rather than as deliberate. */
+.static-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--color-soft);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 15px;
+  word-break: break-all;
+}
+.static-field > svg { width: 16px; height: 16px; flex: none; color: var(--color-muted); }

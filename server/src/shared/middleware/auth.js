@@ -14,6 +14,17 @@ async function protect(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.id);
     if (!user || !user.active) return res.status(401).json({ message: "Account not available" });
+
+    // Issued before the account's sessions were last invalidated — a password
+    // change or reset has happened since. Treated exactly like an expired
+    // token, because from the holder's point of view that is what it is.
+    //
+    // A token minted before this field existed has no `tv`; those are read as
+    // version 0, which is what every existing account already has.
+    if ((payload.tv ?? 0) !== (user.tokenVersion || 0)) {
+      return res.status(401).json({ message: "Your session has ended — sign in again" });
+    }
+
     req.user = user;
     next();
   } catch (e) {
@@ -28,10 +39,35 @@ async function optionalAuth(req, res, next) {
     if (token) {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(payload.id);
-      if (user && user.active) req.user = user;
+      // Same check as protect. A revoked token must not quietly grant the
+      // signed-in view of a public page either.
+      if (user && user.active && (payload.tv ?? 0) === (user.tokenVersion || 0)) req.user = user;
     }
   } catch (e) {
     /* ignore — treat as anonymous */
+  }
+  next();
+}
+
+// The enforcement half of the soft gate. The client also hides these actions,
+// but that is decoration — R1: the client's checks are UX, the rule lives here.
+//
+// 403 with a distinguishable code, not 401: the session is perfectly valid, and
+// signing out and back in would not help. The client keys its prompt off `code`
+// rather than matching on the message text.
+function requireVerified(req, res, next) {
+  if (!req.user) return res.status(401).json({ message: "Please sign in" });
+
+  // Staff accounts are created by an admin, not self-registered, so there is no
+  // signup flow in which they could have verified. Gating them would lock a
+  // teacher out of their own course over a check aimed at roster hygiene.
+  if (req.user.role !== "student") return next();
+
+  if (!req.user.emailVerifiedAt) {
+    return res.status(403).json({
+      code: "EMAIL_NOT_VERIFIED",
+      message: "Confirm your email address first — we sent you a code.",
+    });
   }
   next();
 }
@@ -45,4 +81,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { protect, optionalAuth, requireRole };
+module.exports = { protect, optionalAuth, requireRole, requireVerified };

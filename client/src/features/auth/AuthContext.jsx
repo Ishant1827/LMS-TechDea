@@ -9,6 +9,7 @@ const TOKEN_KEY = "techdea-token";
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [bootError, setBootError] = useState(null); // couldn't verify the session
 
   const setToken = (token) => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
@@ -20,12 +21,21 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
+    setLoading(true);
+    setBootError(null);
     try {
       const { data } = await api.get("/auth/me");
       setUser(data.user);
-    } catch {
-      setToken(null);
-      setUser(null);
+    } catch (e) {
+      // Only the server actually rejecting the token ends the session. A
+      // network failure means we couldn't ask — throwing the token away there
+      // signed people out (and lost their place) over a momentary blip.
+      if (e.status === 401 || e.status === 403) {
+        setToken(null);
+        setUser(null);
+      } else {
+        setBootError(e);
+      }
     } finally {
       setLoading(false);
     }
@@ -67,8 +77,16 @@ export function AuthProvider({ children }) {
 
   const patchUser = (u) => setUser(u);
 
+  // Changing a password ends every other session, including the token this tab
+  // is holding. The server issues a replacement in the same response; storing it
+  // is what stops the user being signed out of the tab they just used.
+  const applyToken = (token) => setToken(token);
+
   return (
-    <AuthCtx.Provider value={{ user, loading, login, register, logout, patchUser }}>
+    <AuthCtx.Provider
+      value={{ user, loading, bootError, retryBoot: loadMe, refreshUser: loadMe,
+               login, register, logout, patchUser, applyToken }}
+    >
       {children}
     </AuthCtx.Provider>
   );

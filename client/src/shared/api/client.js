@@ -28,11 +28,33 @@ api.interceptors.response.use(
       window.dispatchEvent(new Event(AUTH_EXPIRED));
     }
 
+    const isNetwork = err.code === "ERR_NETWORK" || err.code === "ECONNABORTED";
+    const status = err.response?.status ?? 0;
+    // Prefer the server's own wording. Failing that, say something a person can
+    // act on — axios's "Request failed with status code 500" is not that, and
+    // it used to be shown verbatim (it is what a dead upstream behind the dev
+    // proxy produces).
     const msg =
       err.response?.data?.message ||
-      (err.code === "ERR_NETWORK" ? "Can't reach the server" : err.message) ||
+      (isNetwork
+        ? "Can't reach the server"
+        : status >= 500
+        ? "The server had a problem. Try again in a moment."
+        : err.message) ||
       "Something went wrong";
-    return Promise.reject(new Error(msg));
+
+    // Carry the status through. Callers that only read `.message` are
+    // unaffected, but a page can now tell "this course doesn't exist" (404)
+    // apart from "we couldn't ask" (0) instead of guessing.
+    const error = new Error(msg);
+    error.status = status;
+    // Some refusals are a state the UI can act on rather than just text to
+    // show — EMAIL_NOT_VERIFIED being the first. Matching on `code` keeps the
+    // wording free to change without breaking the branch that reads it.
+    error.code = err.response?.data?.code;
+    error.isNetwork = isNetwork;
+    error.ref = err.response?.data?.ref; // request id, for 500s worth reporting
+    return Promise.reject(error);
   }
 );
 

@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "mail:smoke": "node scripts/mail-smoke.js",
+    "backfill:verified": "node scripts/backfill-verified.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -16,7 +18,8 @@
     "express": "^4.19.2",
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.5.3"
+    "mongoose": "^8.5.3",
+    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

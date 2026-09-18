@@ -13,6 +13,12 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
+      # Explicit, not assumed. Several protections key off this: the console and
+      # json mail transports are refused in production precisely because they
+      # print message bodies — one-time codes included — into the log view. If
+      # NODE_ENV is anything else, that guard silently does not apply.
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI          # MongoDB Atlas connection string (…/techdea_lms?…)
         sync: false
       - key: JWT_SECRET         # long random string
@@ -21,6 +27,37 @@ services:
         value: 7d
       - key: CLIENT_ORIGIN      # exact origin of the client, no trailing slash
         value: https://lms-client-szuv.onrender.com
+
+      - key: OTP_PEPPER         # 32+ random chars, keys the one-time codes
+        sync: false
+
+      # ── Email ──────────────────────────────────────────────────────
+      # MAIL_TRANSPORT unset means outbound email is disabled: the service
+      # boots and serves normally, and any attempt to send is logged and
+      # skipped. The console and json transports are refused here outright,
+      # because they write message bodies — one-time codes included — to the
+      # log view.
+      #
+      # Enabling delivery means setting MAIL_TRANSPORT=smtp and *all* of the
+      # values below; a partial SMTP configuration stops the boot rather than
+      # quietly sending nothing. Credentials stay sync:false per C2.
+      #
+      # - key: MAIL_TRANSPORT
+      #   value: smtp
+      # - key: MAIL_FROM
+      #   value: techdea.lms@gmail.com
+      # - key: MAIL_FROM_NAME
+      #   value: TechDea LMS
+      # - key: MAIL_LOGO_URL
+      #   value: https://lms-client-szuv.onrender.com/techdea-logo.png
+      # - key: SMTP_HOST
+      #   value: smtp.gmail.com
+      # - key: SMTP_PORT
+      #   value: "587"
+      # - key: SMTP_USER       # the same Gmail address
+      #   sync: false
+      # - key: SMTP_PASS       # Gmail app password, never the account password
+      #   sync: false
 
   # ── Client ─────────────────────────────────────────────────────────────
   - type: web
