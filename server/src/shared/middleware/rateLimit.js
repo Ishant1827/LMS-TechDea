@@ -69,10 +69,23 @@ const bulkImportLimiter = rateLimit({
   handler: message("Too many imports at once. Try again in about 15 minutes."),
 });
 
+// Acting on many accounts at once is admin-only and cheap per row, but it is
+// also the most destructive button in the product. A ceiling costs nothing and
+// bounds a mistake made in a loop.
+const bulkActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  keyGenerator: (req) => String(req.user?._id || ipKeyGenerator(req.ip)),
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: message("Too many bulk actions. Try again in about 15 minutes."),
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
   passwordLimiter,
   adminPasswordLimiter,
   bulkImportLimiter,
+  bulkActionLimiter,
 };

@@ -23,6 +23,13 @@ export default function AdminUsers() {
 
   // Resetting somebody's password. Kept as its own dialog rather than an inline
   // field, because it is the one action here that hands over an account.
+  // Selection for bulk actions. Held as a Set of ids, and pruned against the
+  // list on every render rather than cleared on filter changes — a selection
+  // that quietly survives into a different filter and then acts on people the
+  // admin can no longer see is the way this goes wrong.
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState("");
+
   const [pwFor, setPwFor] = useState(null); // the user being reset, or null
   const [newPw, setNewPw] = useState("");
   const [pwErr, setPwErr] = useState("");
@@ -79,6 +86,64 @@ export default function AdminUsers() {
       load();
     } catch (e) {
       toast(e.message, "error");
+    }
+  };
+
+  // Only ever the people currently on screen, and never yourself: those are the
+  // two ways a selection can act on somebody the admin did not mean.
+  const selectable = (users || []).filter((u) => u._id !== me._id);
+  const chosen = selectable.filter((u) => selected.has(u._id));
+  const allChosen = selectable.length > 0 && chosen.length === selectable.length;
+
+  const toggleOne = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const toggleAll = () =>
+    setSelected(allChosen ? new Set() : new Set(selectable.map((u) => u._id)));
+
+  const clearSelection = () => setSelected(new Set());
+
+  const runBulk = async (action) => {
+    if (!chosen.length) return;
+
+    const verb = { activate: "Activate", deactivate: "Deactivate", delete: "Delete" }[action];
+    const okToGo = await confirm({
+      title: `${verb} ${chosen.length} ${chosen.length === 1 ? "account" : "accounts"}?`,
+      message:
+        action === "delete"
+          ? "Their enrolments go too. This cannot be undone."
+          : `They will be ${action === "activate" ? "able" : "unable"} to sign in.`,
+      confirmLabel: verb,
+      danger: action === "delete",
+    });
+    if (!okToGo) return;
+
+    setBulkBusy(action);
+    try {
+      const { data } = await api.post("/users/bulk-action", {
+        ids: chosen.map((u) => u._id),
+        action,
+      });
+
+      // Say what actually happened, not what was asked for. A row that could not
+      // be done — a teacher still owning courses — is the thing worth reading.
+      const done = data.summary.done;
+      if (data.skipped.length) {
+        const why = data.skipped.map((x) => `${x.email || "one row"}: ${x.reason}`);
+        toast(`${done} done · ${data.skipped.length} skipped — ${why[0]}${why.length > 1 ? ` (+${why.length - 1} more)` : ""}`, "error");
+      } else {
+        toast(`${done} ${done === 1 ? "account" : "accounts"} ${action}d`);
+      }
+      clearSelection();
+      load();
+    } catch (e) {
+      toast(e.message, "error");
+    } finally {
+      setBulkBusy("");
     }
   };
 
@@ -191,6 +256,39 @@ export default function AdminUsers() {
         </div>
       </div>
 
+      {chosen.length > 0 && (
+        <div className="bulk-bar" role="region" aria-label="Actions for selected accounts">
+          <strong>{chosen.length} selected</strong>
+          <button
+            type="button"
+            className={"btn btn-secondary" + (bulkBusy === "activate" ? " is-loading" : "")}
+            onClick={() => runBulk("activate")}
+            disabled={!!bulkBusy}
+          >
+            Activate
+          </button>
+          <button
+            type="button"
+            className={"btn btn-secondary" + (bulkBusy === "deactivate" ? " is-loading" : "")}
+            onClick={() => runBulk("deactivate")}
+            disabled={!!bulkBusy}
+          >
+            Deactivate
+          </button>
+          <button
+            type="button"
+            className={"btn btn-danger" + (bulkBusy === "delete" ? " is-loading" : "")}
+            onClick={() => runBulk("delete")}
+            disabled={!!bulkBusy}
+          >
+            Delete
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={clearSelection} disabled={!!bulkBusy}>
+            Clear
+          </button>
+        </div>
+      )}
+
       {status === "error" ? (
         <ErrorState title="Couldn't load users" message={error.message} onRetry={load} />
       ) : !users ? (
@@ -199,13 +297,30 @@ export default function AdminUsers() {
         /* The 6-column table pushed the role picker and both action buttons
            off-screen on a phone, so each account becomes a card. */
         <div className="mcard-list">
+          {selectable.length > 0 && (
+            <label className="muted-sm" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 2px 4px" }}>
+              <input type="checkbox" checked={allChosen} onChange={toggleAll} />
+              Select all {selectable.length}
+            </label>
+          )}
           {users.length === 0 && <p className="muted-sm">No users match.</p>}
           {users.map((u) => {
             const self = u._id === me._id;
             return (
-              <article key={u._id} className="mcard card elev-sm">
+              <article
+                key={u._id}
+                className={"mcard card elev-sm" + (selected.has(u._id) ? " is-selected" : "")}
+              >
                 <div className="mcard-top">
-                  <span className="mcard-title" style={{ cursor: "default" }}>
+                  <span className="mcard-title" style={{ cursor: "default", display: "flex", alignItems: "center", gap: 8 }}>
+                    {!self && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${u.name}`}
+                        checked={selected.has(u._id)}
+                        onChange={() => toggleOne(u._id)}
+                      />
+                    )}
                     {u.name}
                     {self && <span className="muted-sm"> (you)</span>}
                   </span>
@@ -263,6 +378,15 @@ export default function AdminUsers() {
           <table className="table">
           <thead>
             <tr>
+              <th style={{ width: 34 }}>
+                <input
+                  type="checkbox"
+                  aria-label={allChosen ? "Clear selection" : "Select every account shown"}
+                  checked={allChosen}
+                  onChange={toggleAll}
+                  disabled={selectable.length === 0}
+                />
+              </th>
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
@@ -275,7 +399,17 @@ export default function AdminUsers() {
             {users.map((u) => {
               const self = u._id === me._id;
               return (
-                <tr key={u._id}>
+                <tr key={u._id} className={selected.has(u._id) ? "is-selected" : undefined}>
+                  <td>
+                    {!self && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${u.name}`}
+                        checked={selected.has(u._id)}
+                        onChange={() => toggleOne(u._id)}
+                      />
+                    )}
+                  </td>
                   <td style={{ fontWeight: 700 }}>
                     {u.name}
                     {self && <span className="muted-sm"> (you)</span>}

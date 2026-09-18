@@ -977,3 +977,29 @@
 @media (max-width: 470px) {
   .form-actions .muted-sm { margin-left: 0; width: 100%; }
 }
+
+/* ── Bulk selection on Admin > Users ──────────────────────────────────────
+   Sits directly above the list and only exists while something is selected,
+   so it never takes space it has not earned. Sticky, because a selection made
+   at the bottom of a long roster should not need scrolling back up to act on. */
+.bulk-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--color-accent-100);
+  border: 1px solid var(--color-accent-200);
+  border-radius: var(--radius-md);
+  color: var(--color-accent-700);
+}
+.bulk-bar > strong { margin-right: 4px; font-size: 14px; }
+.bulk-bar .btn { min-height: 34px; padding: 6px 12px; }
+
+/* A selected row reads as picked without relying on the checkbox alone. */
+.table tr.is-selected > td { background: var(--color-accent-100); }
+.mcard.is-selected { border-color: var(--color-accent-300); background: var(--color-accent-100); }
