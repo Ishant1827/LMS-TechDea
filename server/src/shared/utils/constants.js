@@ -5,7 +5,9 @@ const ENROLLMENT_STATUS = ["active", "completed"];
 const DIFFICULTY = ["beginner", "intermediate", "advanced"];
 const DOUBT_STATUS = ["open", "answered", "resolved"];
 const ASSESSMENT_KINDS = ["assignment", "quiz"];
-const SUBMISSION_STATUS = ["submitted", "graded"];
+// "returned" = the teacher sent it back for another try. It is the student's
+// move again, so it counts as neither waiting-to-be-graded nor finished.
+const SUBMISSION_STATUS = ["submitted", "graded", "returned"];
 
 module.exports = {
   ROLES,

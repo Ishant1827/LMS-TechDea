@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, XCircle, Undo2, Lock } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import { CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
-import { kindMeta, fmtDateTime } from "@/shared/lib/assessments";
+import { kindMeta, fmtDateTime, isOverdue } from "@/shared/lib/assessments";
 import { safeUrl } from "@/shared/lib/safeUrl";
 
 const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
@@ -15,6 +15,24 @@ const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
 /* ── banner shown once a submission exists ───────────────────────────────── */
 function ResultBanner({ a, sub }) {
   if (!sub) return null;
+
+  // Sent back: this is the one banner that asks for something, so it says what
+  // the teacher wants changed rather than only that it came back.
+  if (sub.status === "returned") {
+    return (
+      <div className="result-banner is-fail">
+        <Undo2 />
+        <div>
+          <div className="rb-label">Your teacher asked you to redo this</div>
+          {sub.feedback ? (
+            <div style={{ fontSize: 13 }}>{sub.feedback}</div>
+          ) : (
+            <div style={{ fontSize: 12 }}>Make your changes below and submit again.</div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (sub.status !== "graded") {
     return (
@@ -94,14 +112,26 @@ function QuizReview({ questions, answers }) {
 }
 
 /* ── take / submit ─────────────────────────────────────────────────────── */
-function AttemptForm({ a, onDone }) {
+function AttemptForm({ a, onDone, previous }) {
   const toast = useToast();
   const confirm = useConfirm();
-  const [text, setText] = useState("");
-  const [link, setLink] = useState("");
+  // A returned assignment comes back with what they wrote last time, so fixing
+  // one broken link doesn't mean typing the whole answer again.
+  const [text, setText] = useState(previous?.text || "");
+  const [link, setLink] = useState(previous?.link || "");
   const [answers, setAnswers] = useState(() => (a.questions || []).map(() => -1));
   const [busy, setBusy] = useState(false);
-  const [left, setLeft] = useState(a.kind === "quiz" && a.timeLimitMin ? a.timeLimitMin * 60 : 0);
+  // The countdown can never outlive the due date. A 30-minute quiz opened five
+  // minutes before it closes gets five minutes, and auto-submits while the work
+  // is still accepted — rather than running its full half hour and being
+  // refused at the end with everything typed into it.
+  const [left, setLeft] = useState(() => {
+    if (a.kind !== "quiz" || !a.timeLimitMin) return 0;
+    const limit = a.timeLimitMin * 60;
+    if (!a.dueAt) return limit;
+    const toDue = Math.floor((new Date(a.dueAt).getTime() - Date.now()) / 1000);
+    return Math.max(1, Math.min(limit, toDue));
+  });
   const submittedRef = useRef(false);
 
   const total = (a.questions || []).length;
@@ -230,11 +260,34 @@ function AttemptForm({ a, onDone }) {
           disabled={busy}
           onClick={() => send(false)}
         >
-          {a.kind === "quiz" ? "Submit quiz" : "Submit assignment"}
+          {a.kind === "quiz" ? "Submit quiz" : previous ? "Submit again" : "Submit assignment"}
         </button>
         {a.kind === "quiz" && (
           <span className="muted-sm">One attempt only — you can't change answers after this.</span>
         )}
+      </div>
+    </>
+  );
+}
+
+/* ── the due date has passed and nothing was handed in ───────────────────── */
+// Shown instead of the form, because a form that cannot be submitted is worse
+// than no form: it lets someone type an answer before telling them it is too
+// late. The way back is the teacher's — they can move the due date, or send
+// back a submission — so that is what this says.
+function ClosedNotice({ a }) {
+  return (
+    <>
+      {a.instructions && <p className="prompt-body">{a.instructions}</p>}
+      <div className="result-banner is-fail">
+        <Lock />
+        <div>
+          <div className="rb-label">This closed on {fmtDateTime(a.dueAt)}</div>
+          <div style={{ fontSize: 13 }}>
+            You didn't submit before the deadline. Ask your teacher to extend it if you
+            still need to hand this in.
+          </div>
+        </div>
       </div>
     </>
   );
@@ -284,6 +337,9 @@ export default function AssessmentDetail() {
 
   const { a, sub } = data;
   const { label } = kindMeta(a.kind);
+  // Closed only when nothing was handed in. Work the teacher sent back stays
+  // open past the due date: reopening it was their choice, not the student's.
+  const closed = !sub && isOverdue(a.dueAt);
 
   return (
     <Layout>
@@ -325,8 +381,10 @@ export default function AssessmentDetail() {
 
       <ResultBanner a={a} sub={sub} />
 
-      {!sub ? (
-        <AttemptForm a={a} onDone={finish} />
+      {closed ? (
+        <ClosedNotice a={a} />
+      ) : !sub || sub.status === "returned" ? (
+        <AttemptForm a={a} onDone={finish} previous={sub} />
       ) : a.kind === "quiz" ? (
         <>
           {a.instructions && <p className="prompt-body">{a.instructions}</p>}

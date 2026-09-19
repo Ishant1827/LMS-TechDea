@@ -9,6 +9,36 @@ const { isSafeUrl, LINK_ERROR } = require("../../shared/utils/url");
 const canManage = (user, course) =>
   user.role === "admin" || String(course.owner) === String(user._id);
 
+// A due date is an instant, and the instant a teacher means is Indian time.
+// The builder sends a full ISO string, so this is mostly a parse guard — but a
+// bare "2026-10-15" from a direct API call is read as the *end* of that day in
+// IST, which is what a person means by it, rather than midnight UTC, which is
+// what JavaScript would otherwise decide and is 5.5 hours before the day even
+// starts here. Anything unparseable becomes no due date rather than an
+// Invalid Date that fails at save time.
+function parseDueAt(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T23:59:59.999+05:30`) : new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+// How a deadline is spoken to the person who missed it. Indian time, said so.
+const IST_FORMAT = {
+  timeZone: "Asia/Kolkata",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+};
+const fmtIst = (d) => `${new Date(d).toLocaleString("en-IN", IST_FORMAT)} IST`;
+
+// A minute of slack on the deadline, for the gap between the student's clock
+// and this server's. It is tolerance for skew, not leniency: the screen shows
+// the real deadline and the countdown ends there.
+const CLOCK_SKEW_MS = 60 * 1000;
+
 // Auto-grade a quiz attempt -> percentage 0..100.
 function gradeQuiz(questions, answers = []) {
   if (!questions.length) return 0;
@@ -44,6 +74,7 @@ function shapeSubmission(sub, a) {
     feedback: sub.feedback || "",
     submittedAt: sub.submittedAt,
     gradedAt: sub.gradedAt,
+    returnedAt: sub.returnedAt,
     student: sub.student, // populated where relevant
   };
 }
@@ -208,7 +239,7 @@ exports.create = asyncHandler(async (req, res) => {
     kind,
     title: title.trim(),
     instructions: String(req.body.instructions || "").slice(0, 8000),
-    dueAt: req.body.dueAt ? new Date(req.body.dueAt) : null,
+    dueAt: parseDueAt(req.body.dueAt),
     published: !!req.body.published,
     createdBy: req.user._id,
   };
@@ -235,7 +266,7 @@ exports.update = asyncHandler(async (req, res) => {
   const b = req.body;
   if (b.title !== undefined) assessment.title = String(b.title).trim();
   if (b.instructions !== undefined) assessment.instructions = String(b.instructions).slice(0, 8000);
-  if (b.dueAt !== undefined) assessment.dueAt = b.dueAt ? new Date(b.dueAt) : null;
+  if (b.dueAt !== undefined) assessment.dueAt = parseDueAt(b.dueAt);
 
   if (assessment.kind === "assignment") {
     if (b.points !== undefined) assessment.points = Math.min(1000, Math.max(1, Number(b.points) || 100));
@@ -292,8 +323,25 @@ exports.submit = asyncHandler(async (req, res) => {
   const enrolled = await Enrollment.exists({ student: req.user._id, course: a.course });
   if (!enrolled) return res.status(403).json({ message: "Enrol in the course first" });
 
+  // One submission per student, still. The only way back in is the teacher
+  // sending the work back (PATCH /api/submissions/:id/return) — a student can
+  // neither edit nor withdraw what they handed in.
   const existing = await Submission.findOne({ assessment: a._id, student: req.user._id });
-  if (existing) return res.status(409).json({ message: "You've already submitted this" });
+  if (existing && existing.status !== "returned") {
+    return res.status(409).json({ message: "You've already submitted this" });
+  }
+
+  // The deadline is real: work that arrives after it is refused, not quietly
+  // accepted and marked late. There is exactly one way past it and it belongs
+  // to the teacher — a submission they sent back stays open, because reopening
+  // it was their deliberate act, and moving the due date reopens it for the
+  // whole class. Neither is something a student can do to themselves.
+  const reopened = existing && existing.status === "returned";
+  if (a.dueAt && !reopened && Date.now() > a.dueAt.getTime() + CLOCK_SKEW_MS) {
+    return res.status(400).json({
+      message: `This closed on ${fmtIst(a.dueAt)}. Ask your teacher to extend the due date.`,
+    });
+  }
 
   const doc = {
     assessment: a._id,
@@ -322,6 +370,15 @@ exports.submit = asyncHandler(async (req, res) => {
     doc.score = doc.autoScore; // quizzes grade themselves; teacher may override later
     doc.status = "graded";
     doc.gradedAt = new Date();
+  }
+
+  // A returned assignment is the same record handed in again — the row is
+  // updated rather than replaced, so the unique (assessment, student) pair
+  // holds and the teacher's note stays attached until they grade it.
+  if (existing) {
+    Object.assign(existing, doc, { returnedAt: null });
+    await existing.save();
+    return res.json({ submission: shapeSubmission(existing, a) });
   }
 
   const sub = await Submission.create(doc);

@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Undo2,
 } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
@@ -19,10 +20,14 @@ import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
-import { kindMeta, fmtDate, fmtDateTime } from "@/shared/lib/assessments";
+import { kindMeta, fmtDateTime, istInputValue, istToInstant } from "@/shared/lib/assessments";
 import { safeUrl } from "@/shared/lib/safeUrl";
 
-const dateValue = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+// A teacher who picks only a date means the end of that day, not the first
+// minute of it — so the first date to land in an empty box brings 23:59 with
+// it. Every edit after that is left alone, midnight included.
+const withDefaultTime = (prev, next) =>
+  !prev && next.endsWith("T00:00") ? `${next.slice(0, 11)}23:59` : next;
 const blankQuestion = () => ({ text: "", options: ["", ""], correctIndex: 0 });
 
 /* ══ builder ═══════════════════════════════════════════════════════════════ */
@@ -33,7 +38,7 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
   const [f, setF] = useState({
     title: existing?.title || "",
     instructions: existing?.instructions || "",
-    dueAt: dateValue(existing?.dueAt),
+    dueAt: istInputValue(existing?.dueAt),
     published: existing?.published || false,
     points: existing?.points || 100,
     passPercent: existing?.passPercent ?? 60,
@@ -62,7 +67,7 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
     const payload = {
       title: f.title.trim(),
       instructions: f.instructions,
-      dueAt: f.dueAt || null,
+      dueAt: f.dueAt ? istToInstant(f.dueAt)?.toISOString() || null : null,
       published: f.published,
     };
     if (kind === "assignment") {
@@ -125,13 +130,13 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
         <div className="form-grid">
           <div className="field">
             <label>
-              Due date <span className="text-muted">(optional)</span>
+              Due date &amp; time <span className="text-muted">(optional, IST)</span>
             </label>
             <input
               className="input"
-              type="date"
+              type="datetime-local"
               value={f.dueAt}
-              onChange={(e) => set("dueAt", e.target.value)}
+              onChange={(e) => set("dueAt", withDefaultTime(f.dueAt, e.target.value))}
             />
           </div>
           {kind === "assignment" ? (
@@ -269,6 +274,7 @@ function Builder({ courseId, kind, existing, onClose, onSaved }) {
 /* ══ one submission row in the inbox ══════════════════════════════════════ */
 function GradeRow({ a, sub, onGraded }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const max = a.kind === "quiz" ? 100 : a.points;
   const [score, setScore] = useState(sub.score ?? "");
   const [feedback, setFeedback] = useState(sub.feedback || "");
@@ -284,6 +290,34 @@ function GradeRow({ a, sub, onGraded }) {
       });
       onGraded(data.submission);
       toast("Grade saved");
+    } catch (e) {
+      toast(e.message, "error");
+    }
+    setBusy(false);
+  };
+
+  // Sending it back is the only way a submission reopens — students cannot edit
+  // or withdraw what they handed in. The note is required, because "do it again"
+  // without a reason is not feedback.
+  const sendBack = async () => {
+    if (!feedback.trim()) {
+      toast("Write a note first — the student needs to know what to change", "error");
+      return;
+    }
+    const ok = await confirm({
+      title: `Send this back to ${sub.student?.name?.split(" ")[0] || "the student"}?`,
+      message: "They'll be able to submit again, and any score on it is cleared.",
+      detail: feedback.trim(),
+      confirmLabel: "Send back",
+    });
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const { data } = await api.patch(`/submissions/${sub._id}/return`, { feedback });
+      onGraded(data.submission);
+      setScore("");
+      toast("Sent back for another try");
     } catch (e) {
       toast(e.message, "error");
     }
@@ -405,7 +439,21 @@ function GradeRow({ a, sub, onGraded }) {
         <button className={"btn btn-primary" + (busy ? " is-loading" : "")} disabled={busy} onClick={save}>
           Save
         </button>
+        {/* Assignments only: a quiz shows its answer key once attempted, so a
+            second try would be taken with the answers already in hand. */}
+        {a.kind === "assignment" && sub.status !== "returned" && (
+          <button className="btn btn-ghost" disabled={busy} onClick={sendBack}>
+            <Undo2 />
+            Send back
+          </button>
+        )}
       </div>
+
+      {sub.status === "returned" && (
+        <p className="muted-sm" style={{ margin: "8px 0 0" }}>
+          Sent back {fmtDateTime(sub.returnedAt)} — waiting on the student.
+        </p>
+      )}
     </div>
   );
 }
@@ -424,7 +472,11 @@ function SubmissionsInbox({ assessmentId, onClose }) {
     }));
 
   const a = data?.assessment;
-  const graded = (data?.submissions || []).filter((s) => s.status === "graded").length;
+  const subs = data?.submissions || [];
+  const graded = subs.filter((s) => s.status === "graded").length;
+  // Work sent back is with the student, so it is in neither queue.
+  const returned = subs.filter((s) => s.status === "returned").length;
+  const toGrade = subs.filter((s) => s.status === "submitted").length;
 
   return (
     <Modal title={a ? `Submissions · ${a.title}` : "Submissions"} onClose={onClose} wide>
@@ -449,9 +501,15 @@ function SubmissionsInbox({ assessmentId, onClose }) {
               <span>Graded</span>
             </div>
             <div className="inbox-stat">
-              <b>{data.submissions.length - graded}</b>
+              <b>{toGrade}</b>
               <span>To grade</span>
             </div>
+            {returned > 0 && (
+              <div className="inbox-stat">
+                <b>{returned}</b>
+                <span>Sent back</span>
+              </div>
+            )}
             <div className="inbox-stat">
               <b>{data.missing.length}</b>
               <span>Not submitted</span>
@@ -689,7 +747,7 @@ export default function TeacherAssignments() {
                               <Icon style={{ width: 12, height: 12 }} />
                               {label}
                               {a.kind === "quiz" && ` · ${a.questions?.length || 0} Q · pass ${a.passPercent}%`}
-                              {a.dueAt && ` · due ${fmtDate(a.dueAt)}`}
+                              {a.dueAt && ` · due ${fmtDateTime(a.dueAt)}`}
                             </span>
                           </span>
                         </td>

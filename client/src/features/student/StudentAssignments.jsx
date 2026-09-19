@@ -10,6 +10,7 @@ import {
   dueLabel,
   isOverdue,
   submissionState,
+  isReturned,
   STATE_TAG,
   STATE_LABEL,
 } from "@/shared/lib/assessments";
@@ -173,7 +174,13 @@ export default function StudentAssignments() {
                           {it.submission.percent}%
                         </span>
                       )}
-                      <span className={"tag " + STATE_TAG[state]}>{STATE_LABEL[state]}</span>
+                      {/* Sent-back work sits in "To do", but it is not the same
+                          as never started — the tag says which it is. */}
+                      {isReturned(it.submission) ? (
+                        <span className="tag tag-accent">Sent back</span>
+                      ) : (
+                        <span className={"tag " + STATE_TAG[state]}>{STATE_LABEL[state]}</span>
+                      )}
                     </span>
                   </Link>
                 );

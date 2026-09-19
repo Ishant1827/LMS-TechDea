@@ -46,10 +46,12 @@ export default function TeacherDashboard() {
   const courseLoad = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
   const doubtLoad = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts));
   const studentLoad = useLoad(() => api.get("/students").then((r) => r.data.students));
+  const gradingLoad = useLoad(() => api.get("/submissions/pending").then((r) => r.data));
 
   const courses = courseLoad.data;
   const doubts = doubtLoad.data || [];
   const students = studentLoad.data;
+  const grading = gradingLoad.data;
 
   if (courseLoad.status === "loading")
     return (
@@ -75,9 +77,50 @@ export default function TeacherDashboard() {
   const emptyDrafts = courses.filter((c) => !c.published && c.lessonCount === 0);
   const noStudents = published.filter((c) => c.enrollmentCount === 0);
   const stalled = (students || []).filter((s) => s.stalled).length;
+  const toGrade = grading?.courses || [];
+
+  // Work waiting on the teacher comes first — a dashboard that says "all clear"
+  // while a student waits on a mark is the one thing this panel must never do.
+  // Each row carries its own destination: grading opens the assignments screen,
+  // a stalled cohort opens the roster, a course problem opens that course.
   const attention = [
-    ...emptyDrafts.map((c) => ({ c, icon: FileWarning, tone: "warn", why: "Draft with no lessons" })),
-    ...noStudents.map((c) => ({ c, icon: UserX, tone: "neutral", why: "Published but no one enrolled" })),
+    ...toGrade.map((c) => ({
+      key: "grade-" + c._id,
+      icon: ClipboardList,
+      tone: "warn",
+      title: c.title,
+      why: `${c.pending} submission${c.pending === 1 ? "" : "s"} waiting to be graded`,
+      to: "/teach/assignments",
+    })),
+    ...(stalled
+      ? [
+          {
+            key: "stalled",
+            icon: UserX,
+            tone: "warn",
+            title:
+              stalled === 1 ? "1 student has stalled" : `${stalled} students have stalled`,
+            why: "No activity for 14 days or more",
+            to: "/teach/students",
+          },
+        ]
+      : []),
+    ...emptyDrafts.map((c) => ({
+      key: "draft-" + c._id,
+      icon: FileWarning,
+      tone: "warn",
+      title: c.title,
+      why: "Draft with no lessons",
+      to: `/manage/courses/${c._id}`,
+    })),
+    ...noStudents.map((c) => ({
+      key: "empty-" + c._id,
+      icon: UserX,
+      tone: "neutral",
+      title: c.title,
+      why: "Published but no one enrolled",
+      to: `/manage/courses/${c._id}`,
+    })),
   ];
 
   return (
@@ -180,23 +223,28 @@ export default function TeacherDashboard() {
           {attention.length === 0 ? (
             <div className="card elev-sm quiet-note">
               <BookOpen />
-              <div>
-                <b>All clear</b>
-                <span>Nothing needs your attention right now.</span>
-              </div>
+              {/* Only claim "all clear" if the grading check actually answered —
+                  otherwise say so, rather than reporting silence as good news. */}
+              {gradingLoad.status === "error" ? (
+                <div>
+                  <b>Couldn't check for ungraded work</b>
+                  <span>Everything else looks fine. Open Assignments to be sure.</span>
+                </div>
+              ) : (
+                <div>
+                  <b>All clear</b>
+                  <span>Nothing needs your attention right now.</span>
+                </div>
+              )}
             </div>
           ) : (
-            attention.map(({ c, icon: Icon, tone, why }) => (
-              <Link
-                key={c._id + why}
-                className={"card elev-sm clickable attn-row tone-" + tone}
-                to={`/manage/courses/${c._id}`}
-              >
+            attention.map(({ key, icon: Icon, tone, title, why, to }) => (
+              <Link key={key} className={"card elev-sm clickable attn-row tone-" + tone} to={to}>
                 <span className="ai">
                   <Icon />
                 </span>
                 <span className="at">
-                  <b>{c.title}</b>
+                  <b>{title}</b>
                   <span>{why}</span>
                 </span>
                 <ArrowRight size={15} style={{ color: "var(--color-neutral-500)", flex: "none" }} />

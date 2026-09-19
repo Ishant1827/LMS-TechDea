@@ -24,6 +24,8 @@ const submissionSchema = new mongoose.Schema(
     gradedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     gradedAt: { type: Date, default: null },
     submittedAt: { type: Date, default: Date.now },
+    // set when a teacher sends the work back; cleared on the next submission
+    returnedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
