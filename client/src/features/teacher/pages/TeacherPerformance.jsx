@@ -6,6 +6,7 @@ import Layout from "@/shared/components/layout/Layout";
 import { CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
+import { kindMeta } from "@/shared/lib/assessments";
 
 export default function TeacherPerformance() {
   const [courseId, setCourseId] = useState("");
@@ -102,6 +103,7 @@ export default function TeacherPerformance() {
                   <tr>
                     <th>Assessment</th>
                     <th className="t-num">Submissions</th>
+                    <th className="t-num">Graded</th>
                     <th className="t-num">Avg score</th>
                     <th className="t-num">Pass rate</th>
                   </tr>
@@ -109,10 +111,23 @@ export default function TeacherPerformance() {
                 <tbody>
                   {perf.assessments.map((a) => (
                     <tr key={a._id}>
-                      <td style={{ fontWeight: 700 }}>{a.title}</td>
+                      <td style={{ fontWeight: 700 }}>
+                        {a.title}
+                        <span className="tag tag-outline" style={{ marginLeft: 8 }}>
+                          {kindMeta(a.kind).label}
+                        </span>
+                        {!a.published && (
+                          <span className="tag tag-neutral" style={{ marginLeft: 6 }}>
+                            Draft
+                          </span>
+                        )}
+                      </td>
                       <td className="t-num">{a.submissions}</td>
-                      <td className="t-num">{a.avgScore}%</td>
-                      <td className="t-num">{a.passRate}%</td>
+                      <td className="t-num">{a.graded}</td>
+                      {/* A dash is not a zero: nothing has been scored yet, and a
+                          pass rate only exists where a pass mark was actually set. */}
+                      <td className="t-num">{a.avgScore == null ? "—" : `${a.avgScore}%`}</td>
+                      <td className="t-num">{a.passRate == null ? "—" : `${a.passRate}%`}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -2,6 +2,7 @@ const Course = require("./Course.model");
 const Lesson = require("../lessons/Lesson.model");
 const Enrollment = require("../enrollments/Enrollment.model");
 const Review = require("../reviews/Review.model");
+const Doubt = require("../doubts/Doubt.model");
 const Assessment = require("../assessments/Assessment.model");
 const Submission = require("../submissions/Submission.model");
 const User = require("../users/User.model");
@@ -13,6 +14,18 @@ const rx = (s) => new RegExp(String(s).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\
 
 function canManage(user, course) {
   return user.role === "admin" || String(course.owner) === String(user._id);
+}
+
+// One 0..100 figure for a submission, whatever kind it is — the same rule the
+// assessments module uses. A quiz score is already a percentage; an assignment
+// score is out of the assessment's `points`. `null` means "not scored yet", and
+// the caller must leave those out of an average rather than counting them as 0.
+function scorePercent(sub, assessment) {
+  const raw = sub.score != null ? sub.score : sub.autoScore;
+  if (raw == null) return null;
+  if (assessment.kind === "quiz") return Math.round(raw);
+  const max = assessment.points || 100;
+  return max ? Math.round((raw / max) * 100) : 0;
 }
 
 // Build an ordered [{ name, lessons, minutes }] summary from a course's lesson list.
@@ -253,11 +266,17 @@ exports.remove = asyncHandler(async (req, res) => {
   if (!course) return res.status(404).json({ message: "Course not found" });
   if (!canManage(req.user, course)) return res.status(403).json({ message: "Not your course" });
 
+  // Everything that points at this course goes with it. Doubts and reviews are
+  // on this list because they were missed once: they survived the course and
+  // left the student's Doubts page showing a question against a blank course.
+  // Anything that gains a `course` field belongs here too.
   await Promise.all([
     Lesson.deleteMany({ course: course._id }),
     Enrollment.deleteMany({ course: course._id }),
     Assessment.deleteMany({ course: course._id }),
     Submission.deleteMany({ course: course._id }),
+    Doubt.deleteMany({ course: course._id }),
+    Review.deleteMany({ course: course._id }),
     course.deleteOne(),
   ]);
   res.json({ message: "Course deleted" });
@@ -297,13 +316,20 @@ exports.performance = asyncHandler(async (req, res) => {
   if (!course) return res.status(404).json({ message: "Course not found" });
   if (!canManage(req.user, course)) return res.status(403).json({ message: "Not your course" });
 
-  const [lessons, enrolls] = await Promise.all([
+  const [lessons, enrolls, assessments, submissions] = await Promise.all([
     Lesson.find({ course: course._id, published: { $ne: false } })
       .sort({ order: 1, createdAt: 1 })
       .select("title module")
       .lean(),
     Enrollment.find({ course: course._id })
       .select("completedLessons status updatedAt")
+      .lean(),
+    Assessment.find({ course: course._id })
+      .sort({ createdAt: -1 })
+      .select("title kind points passPercent published")
+      .lean(),
+    Submission.find({ course: course._id })
+      .select("assessment score autoScore status")
       .lean(),
   ]);
 
@@ -326,6 +352,13 @@ exports.performance = asyncHandler(async (req, res) => {
   const now = Date.now();
   const active7 = enrolls.filter((e) => now - new Date(e.updatedAt) < 7 * 86400000).length;
 
+  const subsByAssessment = new Map();
+  submissions.forEach((s) => {
+    const key = String(s.assessment);
+    if (!subsByAssessment.has(key)) subsByAssessment.set(key, []);
+    subsByAssessment.get(key).push(s);
+  });
+
   res.json({
     course: { _id: course._id, title: course.title },
     enrolled,
@@ -334,7 +367,31 @@ exports.performance = asyncHandler(async (req, res) => {
     avgPercent,
     active7,
     totalLessons,
-    // Per-student scoring lives in the Assignments & Quizzes module (not built yet).
-    assessments: [],
+    assessments: assessments.map((a) => {
+      const subs = subsByAssessment.get(String(a._id)) || [];
+      const scored = subs.map((s) => scorePercent(s, a)).filter((p) => p != null);
+      const avg = scored.length
+        ? Math.round(scored.reduce((s, p) => s + p, 0) / scored.length)
+        : null;
+
+      return {
+        _id: a._id,
+        title: a.title,
+        kind: a.kind,
+        published: a.published,
+        submissions: subs.length,
+        graded: subs.filter((s) => s.status === "graded").length,
+        avgScore: avg,
+        // Only a quiz carries a pass mark the teacher actually set. An assignment
+        // has `passPercent` in the schema with a default of 60 that no screen ever
+        // shows, so reporting a pass rate against it would be a number nobody chose.
+        passRate:
+          a.kind === "quiz" && scored.length
+            ? Math.round(
+                (scored.filter((p) => p >= (a.passPercent || 0)).length / scored.length) * 100
+              )
+            : null,
+      };
+    }),
   });
 });

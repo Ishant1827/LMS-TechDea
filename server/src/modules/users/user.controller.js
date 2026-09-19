@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const User = require("./User.model");
 const Course = require("../courses/Course.model");
 const Enrollment = require("../enrollments/Enrollment.model");
+const Submission = require("../submissions/Submission.model");
+const Doubt = require("../doubts/Doubt.model");
+const Review = require("../reviews/Review.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { ROLES } = require("../../shared/utils/constants");
 
@@ -83,6 +86,29 @@ exports.setActive = asyncHandler(async (req, res) => {
   res.json({ user });
 });
 
+/**
+ * Delete an account and everything it authored.
+ *
+ * Leaving the work behind produced rows with nobody attached — a submission in a
+ * grading inbox with a blank student, a review with no author. Per-lesson notes
+ * live inside the enrolment, so they go with it.
+ *
+ * Answers written as a teacher are *not* theirs to take: the doubt belongs to the
+ * student who asked it, so only doubts they asked are removed.
+ *
+ * Both delete paths — one at a time and the bulk toolbar — go through here, so
+ * the two cannot drift apart. Course ownership is checked by the caller.
+ */
+async function removeUserAndTheirWork(user) {
+  await Promise.all([
+    Enrollment.deleteMany({ student: user._id }),
+    Submission.deleteMany({ student: user._id }),
+    Doubt.deleteMany({ student: user._id }),
+    Review.deleteMany({ student: user._id }),
+  ]);
+  await user.deleteOne();
+}
+
 // DELETE /api/users/:id
 exports.remove = asyncHandler(async (req, res) => {
   if (String(req.params.id) === String(req.user._id)) {
@@ -95,8 +121,7 @@ exports.remove = asyncHandler(async (req, res) => {
   if (owns > 0) {
     return res.status(409).json({ message: `Reassign or delete this user's ${owns} course(s) first` });
   }
-  await Enrollment.deleteMany({ student: user._id });
-  await user.deleteOne();
+  await removeUserAndTheirWork(user);
   res.json({ message: "User deleted" });
 });
 
@@ -356,8 +381,7 @@ exports.bulkAction = asyncHandler(async (req, res) => {
         note(`still owns ${owns} course${owns === 1 ? "" : "s"} — reassign them first`);
         continue;
       }
-      await Enrollment.deleteMany({ student: user._id });
-      await user.deleteOne();
+      await removeUserAndTheirWork(user);
       done.push({ id, email: user.email });
       continue;
     }
