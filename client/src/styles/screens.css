@@ -101,13 +101,88 @@
   background: var(--color-neutral-200);
 }
 
+/* A reading lesson's body. The text is rendered by lib/markdown.jsx into real
+   elements, so there is no `white-space: pre-wrap` here any more — line breaks
+   inside a paragraph come through as <br>, and the spacing between blocks is
+   this stylesheet's job rather than the author's stray newlines. */
 .reading-body {
   font-size: 15px;
   line-height: 1.7;
-  white-space: pre-wrap;
   margin-bottom: 18px;
   max-width: 68ch;
 }
+.reading-body > :first-child { margin-top: 0; }
+.reading-body > :last-child { margin-bottom: 0; }
+.reading-body p { margin: 0 0 14px; }
+.reading-body h2 { font-size: 21px; margin: 26px 0 10px; }
+.reading-body h3 { font-size: 17px; margin: 22px 0 8px; }
+.reading-body h4 { font-size: 15px; margin: 20px 0 6px; color: var(--color-neutral-700); }
+.reading-body ul,
+.reading-body ol { margin: 0 0 14px; padding-left: 22px; }
+.reading-body li { margin: 3px 0; }
+.reading-body a { color: var(--color-accent); text-decoration: underline; }
+.reading-body hr { border: 0; border-top: 1px solid var(--color-divider); margin: 22px 0; }
+.reading-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  background: var(--color-neutral-100);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+.reading-body pre {
+  background: var(--color-neutral-900);
+  color: #ede7f7;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+.reading-body pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── the reading-lesson editor (teacher) ─────────────────────────────────── */
+.rt-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rt-tabs { display: inline-flex; gap: 2px; background: var(--color-neutral-100); border-radius: var(--radius-pill); padding: 3px; }
+.rt-tab {
+  border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 700;
+  color: var(--color-muted);
+  padding: 5px 14px; border-radius: var(--radius-pill);
+}
+.rt-tab.is-on { background: var(--color-surface); color: var(--color-accent); box-shadow: 0 1px 2px rgba(24, 19, 41, 0.08); }
+.rt-preview {
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 16px 18px;
+  min-height: 220px;
+  max-width: none;
+  margin-bottom: 0;
+}
+.rt-tip { font-size: 12px; color: var(--color-muted); margin: 8px 0 0; line-height: 1.6; }
+.rt-help { margin-top: 8px; }
+.rt-help summary { font-size: 12px; font-weight: 700; color: var(--color-accent); cursor: pointer; }
+.rt-help > p { margin: 10px 0 0; }
+.rt-guide { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 13px; }
+.rt-guide th {
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--color-muted); font-weight: 700; padding: 0 12px 6px 0;
+}
+.rt-guide td { padding: 6px 12px 6px 0; border-top: 1px solid var(--color-divider); vertical-align: top; }
+.rt-guide code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px; background: var(--color-neutral-100);
+  border: 1px solid var(--color-divider); border-radius: 6px; padding: 2px 6px;
+  white-space: nowrap;
+}
+.rt-guide td p { margin: 0; }
 
 .file-card {
   display: flex;

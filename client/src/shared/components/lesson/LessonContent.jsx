@@ -3,6 +3,7 @@ import { VideoPlaceholder } from "@/shared/components/ui";
 import FileViewer from "@/shared/components/lesson/FileViewer";
 import { toEmbedUrl } from "@/shared/lib/lessonTypes";
 import { safeUrl } from "@/shared/lib/safeUrl";
+import Markdown from "@/shared/lib/markdown";
 
 function FileCard({ url, name }) {
   const href = safeUrl(url);
@@ -41,7 +42,11 @@ export default function LessonContent({ lesson }) {
         ) : (
           <VideoPlaceholder />
         )}
-        {lesson.content && <div className="reading-body">{lesson.content}</div>}
+        {lesson.content && (
+          <div className="reading-body">
+            <Markdown text={lesson.content} />
+          </div>
+        )}
         {lesson.fileUrl && (
           <>
             <div className="muted-sm" style={{ margin: "0 0 6px" }}>
@@ -60,8 +65,11 @@ export default function LessonContent({ lesson }) {
 
   return (
     <div className="reading-body">
-      {lesson.content ||
-        "Work through the material for this lesson, then mark it complete to unlock the next one."}
+      {lesson.content ? (
+        <Markdown text={lesson.content} />
+      ) : (
+        <p>Work through the material for this lesson, then mark it complete to unlock the next one.</p>
+      )}
     </div>
   );
 }

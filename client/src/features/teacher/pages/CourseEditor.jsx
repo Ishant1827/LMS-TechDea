@@ -12,6 +12,7 @@ import { useConfirm } from "@/shared/context/ConfirmContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { LESSON_TYPES, typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
 import { fileToResizedDataUrl } from "@/shared/lib/image";
+import ReadingEditor from "@/features/teacher/components/ReadingEditor";
 
 const emptyForm = {
   title: "",
@@ -630,16 +631,13 @@ function LessonManager({ courseId, lessons, setLessons }) {
                 placeholder="https://youtube.com/watch?v=…"
               />
             </div>
-            <div className="field">
-              <label>Description (shown under the video — optional)</label>
-              <textarea
-                className="input"
-                style={{ minHeight: 90 }}
-                value={draft.content}
-                onChange={set("content")}
-                placeholder="What this video covers, key points, timestamps…"
-              />
-            </div>
+            <ReadingEditor
+              label="Description (shown under the video — optional)"
+              placeholder="What this video covers, key points, timestamps…"
+              minHeight={110}
+              value={draft.content}
+              onChange={set("content")}
+            />
             <div className="form-grid">
               <div className="field">
                 <label>Attachment file URL (optional)</label>
@@ -663,15 +661,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
           </>
         )}
         {draft.type === "reading" && (
-          <div className="field">
-            <label>Reading text / post</label>
-            <textarea
-              className="input"
-              style={{ minHeight: 120 }}
-              value={draft.content}
-              onChange={set("content")}
-            />
-          </div>
+          <ReadingEditor value={draft.content} onChange={set("content")} />
         )}
         {draft.type === "file" && (
           <>
