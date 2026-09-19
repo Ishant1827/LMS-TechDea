@@ -89,9 +89,36 @@ exports.reorder = asyncHandler(async (req, res) => {
   const course = await loadManageableCourse(req, res);
   if (!course) return;
 
-  const ids = Array.isArray(req.body.orderedIds) ? req.body.orderedIds : [];
+  // A body with the wrong key used to be answered with a cheerful 200 and an
+  // unchanged list — a success the caller did not earn, and the kind of reply
+  // that hides a typo in a client for months.
+  const { orderedIds } = req.body;
+  if (!Array.isArray(orderedIds) || !orderedIds.length) {
+    return res
+      .status(400)
+      .json({ message: "orderedIds must be a non-empty array of lesson ids" });
+  }
+
+  // And a list that does not name every lesson is not a reorder: the ones left
+  // out keep their old `order` and the curriculum comes back interleaved. The
+  // set has to match exactly, which also means nothing unrecognisable ever
+  // reaches updateOne and becomes a cast error half way through the writes.
+  const existing = await Lesson.find({ course: course._id }).select("_id").lean();
+  const known = new Set(existing.map((l) => String(l._id)));
+  const given = orderedIds.map(String);
+  const unique = new Set(given);
+
+  if (unique.size !== given.length) {
+    return res.status(400).json({ message: "orderedIds lists the same lesson twice" });
+  }
+  if (unique.size !== known.size || given.some((id) => !known.has(id))) {
+    return res
+      .status(400)
+      .json({ message: "orderedIds must list every lesson in this course, exactly once" });
+  }
+
   await Promise.all(
-    ids.map((id, i) => Lesson.updateOne({ _id: id, course: course._id }, { $set: { order: i } }))
+    given.map((id, i) => Lesson.updateOne({ _id: id, course: course._id }, { $set: { order: i } }))
   );
   const lessons = await Lesson.find({ course: course._id }).sort({ order: 1, createdAt: 1 }).lean();
   res.json({ lessons });

@@ -373,7 +373,7 @@ DELETE /api/courses/:id/reviews/mine
 
 GET    /api/courses/:id/lessons
 POST   /api/courses/:id/lessons              (owner/admin)
-PUT    /api/courses/:id/lessons/reorder      (owner/admin)
+PUT    /api/courses/:id/lessons/reorder      (owner/admin)  { orderedIds: [every lesson, once] }
 PUT    /api/courses/:id/lessons/:lessonId    (owner/admin)
 DELETE /api/courses/:id/lessons/:lessonId    (owner/admin)
 
