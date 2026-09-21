@@ -33,7 +33,7 @@ Three roles — **student**, **teacher**, **admin** — on one codebase.
 |---|---|
 | 🎓 **Student** | Browse the catalog, enrol, work through lessons, keep private notes, resume where they left off, submit assignments, take timed quizzes, ask doubts, rate courses. |
 | 🧑‍🏫 **Teacher** | Author courses and lessons (drag to reorder), publish, build assignments and quizzes, grade submissions, answer doubts, watch a roster and a performance view — **for their own courses only**. |
-| 🛡️ **Admin** | Everything a teacher can do, on every course, plus user management: create staff, change roles, deactivate, set passwords, and bulk-import a cohort from a CSV. |
+| 🛡️ **Admin** | Everything a teacher can do, on every course, plus user management: create any account, change roles, deactivate, set passwords, and bulk-import a cohort from a CSV. |
 
 Lessons come in three types — **video**, **reading**, **file**. Reading lessons
 (and a video's description) support **simple formatting** — headings, bold,
@@ -151,8 +151,11 @@ Students ask a question against a course, optionally pinned to a lesson.
 Teachers answer the ones on their own courses; admins see all of them.
 
 ### User management & bulk import
-**Admin › Users** lists everyone with a course count, and can create staff,
-change roles, deactivate accounts and set a password.
+**Admin › Users** lists everyone with a course count, and can create an account
+of any role — student, teacher or admin — change roles, deactivate accounts and
+set a password. The password typed on that form is temporary: the account is
+held to one screen until its owner chooses their own. Creating an **admin** is
+deliberately one-at-a-time; a spreadsheet cannot mint one.
 
 **Bulk import** takes a CSV with `name`, `email` and an optional `role`
 (`student` or `teacher` — admins stay a deliberate, one-at-a-time act). The
@@ -410,7 +413,7 @@ PATCH  /api/submissions/:id/return           (owner/admin) { feedback } — send
 GET    /api/students                         (teacher/admin) roster across my courses
 
 GET    /api/users?role=&q=                   (admin)
-POST   /api/users                            (admin) create teacher/admin
+POST   /api/users                            (admin) create any role
 POST   /api/users/bulk                       (admin) { people: [{ name, email, role }] }
 PATCH  /api/users/:id/role                   (admin)
 PATCH  /api/users/:id/password               (admin) set a password

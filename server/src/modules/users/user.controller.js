@@ -38,8 +38,8 @@ exports.create = asyncHandler(async (req, res) => {
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email and password are required" });
   }
-  if (!["teacher", "admin"].includes(role)) {
-    return res.status(400).json({ message: "Role must be teacher or admin" });
+  if (!ROLES.includes(role)) {
+    return res.status(400).json({ message: "Role must be student, teacher or admin" });
   }
   if (String(password).length < 6) {
     return res.status(400).json({ message: "Password must be at least 6 characters" });
@@ -47,7 +47,11 @@ exports.create = asyncHandler(async (req, res) => {
   if (await User.findOne({ email: email.toLowerCase() })) {
     return res.status(409).json({ message: "Email already in use" });
   }
-  const user = new User({ name, email, role });
+  // The admin typed this password, so the owner has never chosen one — exactly
+  // the situation A12 exists for, and the same one a bulk import and a password
+  // reset already flag. The account can read itself and change its password,
+  // nothing else, until it picks one of its own.
+  const user = new User({ name, email, role, mustChangePassword: true });
   await user.setPassword(password);
   await user.save();
   res.status(201).json({ user });

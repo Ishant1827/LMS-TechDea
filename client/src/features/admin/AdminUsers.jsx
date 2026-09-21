@@ -196,7 +196,7 @@ export default function AdminUsers() {
       <h2 className="page-title">Users</h2>
 
       <form onSubmit={create} className="card elev-sm" style={{ marginBottom: 20, maxWidth: 640 }}>
-        <div className="card-kicker">Create teacher / admin</div>
+        <div className="card-kicker">Create an account</div>
         <div className="form-grid">
           <div className="field">
             <label>Name</label>
@@ -217,12 +217,17 @@ export default function AdminUsers() {
               value={draft.role}
               onChange={(v) => setDraft((d) => ({ ...d, role: v }))}
               options={[
+                { value: "student", label: "Student" },
                 { value: "teacher", label: "Teacher" },
                 { value: "admin", label: "Admin" },
               ]}
             />
           </div>
         </div>
+        <p className="muted-sm" style={{ margin: "0 0 12px" }}>
+          The password you type here is temporary — they'll be asked to choose their own the
+          first time they sign in.
+        </p>
         <button
           className={"btn btn-primary" + (creating ? " is-loading" : "")}
           style={{ width: "fit-content" }}
