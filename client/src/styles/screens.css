@@ -416,20 +416,46 @@
   gap: 24px;
   align-items: start;
 }
-.dash-sub {
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  font-weight: 800;
-  font-size: 10px;
-  margin: 10px 0 6px;
+/* ── dashboard: "My Learning" as a course card grid ──────────────────────
+   Course cards mirror the discover strip's tile language instead of a plain
+   list, so progress and the discover section read as one visual family. A
+   finished course spans both columns — its content is a single line, not
+   worth a whole tile of its own. */
+.learn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.learn-card { padding: 10px; gap: 8px; }
+.learn-card .lc-title {
+  font-size: 12.5px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.mini-row {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+.learn-card .lc-progress { display: flex; align-items: center; gap: 7px; }
+.learn-card .lc-progress .pbar { flex: 1; }
+.learn-card .lc-pct { font-size: 10.5px; font-weight: 800; color: var(--color-muted); flex: none; }
+.learn-card.is-done {
+  grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; padding: 12px 14px;
 }
+.learn-card .lc-done-ic {
+  width: 32px; height: 32px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; background: #e2f3ec; color: var(--color-success);
+}
+.learn-card .lc-done-ic svg { width: 16px; height: 16px; }
+@media (max-width: 520px) { .learn-grid { grid-template-columns: 1fr; } }
+
+/* ── dashboard: tabbed activity card (doubts / due soon) ─────────────────
+   These used to be two stacked panels — a list, then a second header, then
+   a second list, often with one side mostly empty. One card with a tab
+   switcher keeps the same information one tap away without the imbalance. */
+.activity-card { padding: 10px; gap: 0; }
+.activity-card .seg { width: 100%; }
+.activity-card .seg-opt { flex: 1; justify-content: center; }
+.activity-list { margin-top: 8px; }
+.activity-empty { padding: 8px 6px; margin: 0; }
+.activity-row {
+  display: block; padding: 9px 10px; border-radius: 10px;
+  text-decoration: none; color: var(--color-text);
+}
+.activity-row:hover { background: var(--color-soft); }
+.activity-row--static { display: flex; align-items: center; gap: 8px; cursor: default; }
+.activity-more { display: block; padding: 6px 10px 2px; }
 
 /* horizontal scroller (discover strip) */
 .hscroll {
@@ -878,31 +904,33 @@
 
 /* ══════════ DASHBOARD WIDGETS ═══════════════════════════════════════════════ */
 /* ── dashboard: stat tiles ───────────────────────────────────────────────────
-   Replaces the bare number-on-white tiles. Icon chip carries the tone, the
-   figure stays the loudest thing, context sits underneath. */
+   Icon sits on its own row so the tile reads top-to-bottom like a stat card
+   instead of a wide icon+text strip with dead space past the label. The tone
+   wash sits behind everything as a quiet corner flourish, not a filler. */
 .statx {
-  flex-direction: row; align-items: center; gap: 13px;
-  padding: 15px 16px; position: relative; overflow: hidden;
+  flex-direction: column; align-items: flex-start; gap: 12px;
+  padding: 17px 18px; position: relative; overflow: hidden;
+  border-color: var(--color-neutral-300);
 }
 .statx::after {
-  /* faint tonal wash so the tiles aren't flat white */
-  content: ""; position: absolute; inset: auto -30px -40px auto;
-  width: 120px; height: 120px; border-radius: 50%;
-  background: var(--tone-wash, transparent); opacity: .5; pointer-events: none;
+  content: ""; position: absolute; inset: auto -26px -30px auto;
+  width: 110px; height: 110px; border-radius: 50%;
+  background: var(--tone-wash, transparent); opacity: .55; pointer-events: none;
 }
 .stat-ic {
-  width: 42px; height: 42px; border-radius: 13px; flex: none;
-  display: grid; place-items: center;
+  width: 36px; height: 36px; border-radius: 11px; flex: none;
+  display: grid; place-items: center; position: relative; z-index: 1;
   background: var(--tone-bg); color: var(--tone-fg);
 }
-.stat-ic svg { width: 19px; height: 19px; }
-.stat-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.stat-ic svg { width: 17px; height: 17px; }
+.stat-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2;
+  position: relative; z-index: 1; width: 100%; }
 .stat-value {
-  font-family: var(--font-heading); font-weight: 850; font-size: 25px;
+  font-family: var(--font-heading); font-weight: 850; font-size: 27px;
   letter-spacing: -0.5px; color: var(--color-text);
 }
 .stat-value small { font-size: 15px; font-weight: 700; color: var(--color-neutral-500); }
-.stat-label { font-size: 12.5px; font-weight: 700; color: var(--color-text); margin-top: 1px;
+.stat-label { font-size: 12.5px; font-weight: 700; color: var(--color-text); margin-top: 3px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stat-hint { font-size: 11.5px; color: var(--color-muted); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -962,12 +990,19 @@
 .jump-tile b { font-size: 13px; font-weight: 700; }
 @media (max-width: 400px) { .jump-grid { grid-template-columns: 1fr; } }
 
+/* ── dashboard: one bordered card holding several rows ───────────────────
+   Doubts and attention items used to each be their own elevated card — a
+   wall of identical white boxes with a gap between every one. One card per
+   list, a hover tint per row, reads as a single list instead of a stack. */
+.list-card { padding: 6px; gap: 0; }
+
 /* ── dashboard: attention rows ──────────────────────────────────────────── */
 .attn-row {
-  display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 11px 13px;
-  margin-bottom: 8px; text-decoration: none; color: var(--color-text);
+  display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px;
+  text-decoration: none; color: var(--color-text); border-radius: 10px; transition: background .15s;
   border-left: 3px solid var(--tone-fg, var(--color-neutral-400));
 }
+.attn-row:hover { background: var(--color-soft); }
 .attn-row .ai { width: 30px; height: 30px; border-radius: 10px; flex: none;
   display: grid; place-items: center; background: var(--tone-bg); color: var(--tone-fg); }
 .attn-row .ai svg { width: 15px; height: 15px; }
@@ -976,8 +1011,10 @@
 .attn-row .at span { font-size: 11.5px; color: var(--color-muted); }
 
 /* ── dashboard: doubt rows with an initials avatar ──────────────────────── */
-.doubt-row { display: flex; flex-direction: row; gap: 10px; padding: 11px 13px;
-  margin-bottom: 8px; text-decoration: none; color: var(--color-text); align-items: flex-start; }
+.doubt-row { display: flex; flex-direction: row; gap: 10px; padding: 10px 12px;
+  text-decoration: none; color: var(--color-text); align-items: flex-start;
+  border-radius: 10px; transition: background .15s; }
+.doubt-row:hover { background: var(--color-soft); }
 .doubt-row .avatar { flex: none; }
 .doubt-row .avatar { width: 30px; height: 30px; font-size: 11px; }
 .doubt-row .dr-body { flex: 1; min-width: 0; }
@@ -1016,12 +1053,12 @@
   .error-state-retry { width: 100%; justify-content: center; }
 }
 
-/* Two tiles across a phone leaves ~76px for the text once the icon chip is in,
-   which clipped "Lessons done". Trim the chrome and let the label wrap. */
+/* Two tiles across a phone still has room for the vertical layout; just trim
+   the chrome a touch and let the label/hint wrap instead of clipping. */
 @media (max-width: 470px) {
-  .statx { padding: 13px; gap: 10px; }
-  .stat-ic { width: 34px; height: 34px; border-radius: 11px; }
-  .stat-ic svg { width: 17px; height: 17px; }
+  .statx { padding: 14px; gap: 9px; }
+  .stat-ic { width: 32px; height: 32px; border-radius: 10px; }
+  .stat-ic svg { width: 16px; height: 16px; }
   .stat-value { font-size: 22px; }
   .stat-label { white-space: normal; overflow: visible; }
   .stat-hint { white-space: normal; overflow: visible; }

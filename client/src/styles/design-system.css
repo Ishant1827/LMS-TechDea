@@ -19,7 +19,7 @@
   --color-card:      #ffffff;
   --color-text:      #181329;
   --color-muted:     #6f6a7c;
-  --color-divider:   #e7e3ee;
+  --color-divider:   #e2dceb;
   --color-soft:      #f5f2fb;
 
   --color-accent:    #6d28d9;
@@ -67,8 +67,8 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 8px 30px rgba(40, 20, 80, .05);
-  --shadow-md: 0 8px 30px rgba(40, 20, 80, .10);
+  --shadow-sm: 0 1px 2px rgba(23, 17, 38, .04), 0 8px 24px rgba(40, 20, 80, .07);
+  --shadow-md: 0 8px 30px rgba(40, 20, 80, .12);
   --shadow-lg: 0 16px 50px rgba(40, 20, 80, .16);
 }
 

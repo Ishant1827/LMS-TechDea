@@ -199,19 +199,21 @@ export default function TeacherDashboard() {
               </div>
             </div>
           ) : (
-            doubts.slice(0, 4).map((d) => (
-              <Link key={d._id} className="card elev-sm clickable doubt-row" to="/teach/doubts">
-                <span className="avatar avatar-initials">{initials(d.student?.name || "?")}</span>
-                <span className="dr-body">
-                  <span className="dr-meta">
-                    <span className="who">{d.student?.name || "Student"}</span>
-                    <span className="where">{d.course?.title}</span>
-                    <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")}>{d.status}</span>
+            <div className="card elev-sm list-card">
+              {doubts.slice(0, 4).map((d) => (
+                <Link key={d._id} className="doubt-row" to="/teach/doubts">
+                  <span className="avatar avatar-initials">{initials(d.student?.name || "?")}</span>
+                  <span className="dr-body">
+                    <span className="dr-meta">
+                      <span className="who">{d.student?.name || "Student"}</span>
+                      <span className="where">{d.course?.title}</span>
+                      <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")}>{d.status}</span>
+                    </span>
+                    <span className="dr-text">{d.text}</span>
                   </span>
-                  <span className="dr-text">{d.text}</span>
-                </span>
-              </Link>
-            ))
+                </Link>
+              ))}
+            </div>
           )}
         </div>
 
@@ -238,18 +240,20 @@ export default function TeacherDashboard() {
               )}
             </div>
           ) : (
-            attention.map(({ key, icon: Icon, tone, title, why, to }) => (
-              <Link key={key} className={"card elev-sm clickable attn-row tone-" + tone} to={to}>
-                <span className="ai">
-                  <Icon />
-                </span>
-                <span className="at">
-                  <b>{title}</b>
-                  <span>{why}</span>
-                </span>
-                <ArrowRight size={15} style={{ color: "var(--color-neutral-500)", flex: "none" }} />
-              </Link>
-            ))
+            <div className="card elev-sm list-card">
+              {attention.map(({ key, icon: Icon, tone, title, why, to }) => (
+                <Link key={key} className={"attn-row tone-" + tone} to={to}>
+                  <span className="ai">
+                    <Icon />
+                  </span>
+                  <span className="at">
+                    <b>{title}</b>
+                    <span>{why}</span>
+                  </span>
+                  <ArrowRight size={15} style={{ color: "var(--color-neutral-500)", flex: "none" }} />
+                </Link>
+              ))}
+            </div>
           )}
 
           <div className="sec-head">

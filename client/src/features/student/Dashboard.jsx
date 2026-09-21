@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Play,
@@ -28,6 +29,7 @@ const STATUS_TAG = { open: "tag-outline", answered: "tag-accent", resolved: "tag
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [activityTab, setActivityTab] = useState("doubts");
   // Enrolments gate the page — everything below is derived from them. The
   // other three fill their own panels and report their own failure, so one
   // dead endpoint no longer turns the whole dashboard into a blank slate.
@@ -193,133 +195,138 @@ export default function Dashboard() {
           </div>
           {enr.length === 0 && <p className="muted-sm">Nothing yet.</p>}
 
-          {inProgress.length > 0 && <div className="muted-sm dash-sub">In progress</div>}
-          {inProgress.map((e) => (
-            <Link
-              key={e._id}
-              className="card elev-sm plain clickable mini-row"
-              to={e.currentLessonId ? `/learn/${e.course._id}/${e.currentLessonId}` : `/courses/${e.course._id}`}
-            >
-              <CourseThumb src={e.course.thumbnailUrl} height={44} style={{ width: 64, flex: "none" }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{e.course.title}</div>
-                <div style={{ marginTop: 4 }}>
+          <div className="learn-grid">
+            {inProgress.map((e) => (
+              <Link
+                key={e._id}
+                className="card elev-sm plain clickable learn-card"
+                to={e.currentLessonId ? `/learn/${e.course._id}/${e.currentLessonId}` : `/courses/${e.course._id}`}
+              >
+                <CourseThumb src={e.course.thumbnailUrl} height={64} />
+                <div className="lc-title">{e.course.title}</div>
+                <div className="lc-progress">
                   <Bar value={e.percent} />
+                  <span className="lc-pct">{e.percent}%</span>
                 </div>
-                <div className="muted-sm" style={{ marginTop: 3 }}>
-                  {e.completed}/{e.total} lessons · {e.percent}%
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
 
-          {completed.length > 0 && <div className="muted-sm dash-sub">Completed</div>}
-          {completed.map((e) => (
-            <Link
-              key={e._id}
-              className="card elev-sm plain clickable mini-row"
-              to={`/courses/${e.course._id}`}
-            >
-              <CourseThumb src={e.course.thumbnailUrl} height={44} style={{ width: 64, flex: "none" }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{e.course.title}</div>
-                <div className="muted-sm" style={{ marginTop: 2 }}>Completed — review or leave a rating</div>
-              </div>
-              <span className="tag tag-accent" style={{ flex: "none" }}>
-                Done
-              </span>
-            </Link>
-          ))}
+            {completed.map((e) => (
+              <Link
+                key={e._id}
+                className="card elev-sm plain clickable learn-card is-done"
+                to={`/courses/${e.course._id}`}
+              >
+                <span className="lc-done-ic">
+                  <CheckCircle2 />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="lc-title">{e.course.title}</div>
+                  <div className="muted-sm" style={{ marginTop: 2 }}>Completed — review or leave a rating</div>
+                </div>
+                <span className="tag tag-accent" style={{ flex: "none" }}>
+                  Done
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div>
           <div className="sec-head">
             <MessageCircleQuestion />
-            <h4>Your doubts</h4>
+            <h4>Activity</h4>
           </div>
-          {doubtLoad.status === "error" ? (
-            <ErrorState
-              compact
-              title="Couldn't load your doubts"
-              onRetry={doubtLoad.reload}
-            />
-          ) : doubts.length === 0 ? (
-            <p className="muted-sm">
-              No questions yet. Use “Ask a doubt” inside a lesson.
-            </p>
-          ) : (
-            <>
-              {doubts.map((d) => (
-                <Link
-                  key={d._id}
-                  className="card elev-sm plain clickable"
-                  style={{ marginBottom: 8, padding: "10px 12px" }}
-                  to="/doubts"
-                >
-                  <div className="row" style={{ gap: 6 }}>
-                    <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
-                      {d.course?.title || "Course"}
-                    </span>
-                    <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")} style={{ flex: "none" }}>
-                      {d.status}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, marginTop: 3 }}>{d.text}</div>
-                </Link>
-              ))}
-              <Link className="muted-sm" to="/doubts">
-                All doubts →
-              </Link>
-            </>
-          )}
 
-          <div className="sec-head">
-            <CalendarClock />
-            <h4>Due soon</h4>
-          </div>
-          {dueLoad.status === "error" ? (
-            <ErrorState compact title="Couldn't load what's due" onRetry={dueLoad.reload} />
-          ) : !due ? (
-            <div className="card elev-sm" style={{ padding: "12px 14px" }}>
-              <div className="muted-sm">Loading…</div>
+          <div className="card elev-sm activity-card">
+            <div className="seg" role="tablist">
+              <label className="seg-opt">
+                <input
+                  type="radio"
+                  name="dash-activity"
+                  checked={activityTab === "doubts"}
+                  onChange={() => setActivityTab("doubts")}
+                />
+                Doubts{doubts.length ? ` · ${doubts.length}` : ""}
+              </label>
+              <label className="seg-opt">
+                <input
+                  type="radio"
+                  name="dash-activity"
+                  checked={activityTab === "due"}
+                  onChange={() => setActivityTab("due")}
+                />
+                Due soon{dueCount ? ` · ${dueCount}` : ""}
+              </label>
             </div>
-          ) : due.length === 0 ? (
-            <div className="card elev-sm" style={{ padding: "12px 14px" }}>
-              <div className="muted-sm">Nothing due right now.</div>
-            </div>
-          ) : (
-            <>
-              {due.map((a) => {
-                const { Icon, label } = kindMeta(a.kind);
-                const late = isOverdue(a.dueAt);
-                return (
-                  <Link
-                    key={a._id}
-                    className="card elev-sm plain clickable"
-                    style={{ marginBottom: 8, padding: "10px 12px" }}
-                    to={`/assignments/${a._id}`}
-                  >
-                    <div className="row" style={{ gap: 6 }}>
-                      <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
-                        <Icon size={12} /> {label} · {a.course?.title}
-                      </span>
-                      <span
-                        className={"due-chip" + (late ? " is-overdue" : "")}
-                        style={{ flex: "none" }}
-                      >
-                        <CalendarClock />
-                        {dueLabel(a.dueAt)}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{a.title}</div>
+
+            <div className="activity-list">
+              {activityTab === "doubts" ? (
+                doubtLoad.status === "error" ? (
+                  <ErrorState compact title="Couldn't load your doubts" onRetry={doubtLoad.reload} />
+                ) : doubts.length === 0 ? (
+                  <p className="muted-sm activity-empty">
+                    No questions yet. Use “Ask a doubt” inside a lesson.
+                  </p>
+                ) : (
+                  <>
+                    {doubts.map((d) => (
+                      <Link key={d._id} className="activity-row plain clickable" to="/doubts">
+                        <div className="row" style={{ gap: 6 }}>
+                          <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
+                            {d.course?.title || "Course"}
+                          </span>
+                          <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")} style={{ flex: "none" }}>
+                            {d.status}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, marginTop: 3 }}>{d.text}</div>
+                      </Link>
+                    ))}
+                    <Link className="muted-sm activity-more" to="/doubts">
+                      All doubts →
+                    </Link>
+                  </>
+                )
+              ) : dueLoad.status === "error" ? (
+                <ErrorState compact title="Couldn't load what's due" onRetry={dueLoad.reload} />
+              ) : !due ? (
+                <p className="muted-sm activity-empty">Loading…</p>
+              ) : due.length === 0 ? (
+                <div className="activity-row activity-row--static">
+                  <CalendarClock size={15} style={{ color: "var(--color-neutral-500)" }} />
+                  <span className="muted-sm">Nothing due right now.</span>
+                </div>
+              ) : (
+                <>
+                  {due.map((a) => {
+                    const { Icon, label } = kindMeta(a.kind);
+                    const late = isOverdue(a.dueAt);
+                    return (
+                      <Link key={a._id} className="activity-row plain clickable" to={`/assignments/${a._id}`}>
+                        <div className="row" style={{ gap: 6 }}>
+                          <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
+                            <Icon size={12} /> {label} · {a.course?.title}
+                          </span>
+                          <span
+                            className={"due-chip" + (late ? " is-overdue" : "")}
+                            style={{ flex: "none" }}
+                          >
+                            <CalendarClock />
+                            {dueLabel(a.dueAt)}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{a.title}</div>
+                      </Link>
+                    );
+                  })}
+                  <Link className="muted-sm activity-more" to="/assignments">
+                    All assignments →
                   </Link>
-                );
-              })}
-              <Link className="muted-sm" to="/assignments">
-                All assignments →
-              </Link>
-            </>
-          )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
