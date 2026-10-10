@@ -5,9 +5,8 @@ import PasswordInput from "@/shared/components/ui/PasswordInput";
 import { useAuth } from "@/features/auth/AuthContext";
 import { roleHome } from "@/shared/lib/roles";
 import { passwordProblem, PASSWORD_HINT } from "@/shared/lib/password";
+import { emailOk, phoneOk } from "@/shared/lib/format";
 
-const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
 
 export default function Signup() {
   const { register } = useAuth();

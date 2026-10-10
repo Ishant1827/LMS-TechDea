@@ -1,19 +1,6 @@
 import { useState } from "react";
 import LessonContent from "@/shared/components/lesson/LessonContent";
-import { typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
-
-function groupByModule(lessons) {
-  const out = [];
-  for (const l of lessons) {
-    let g = out.find((x) => x.name === l.module);
-    if (!g) {
-      g = { name: l.module, items: [] };
-      out.push(g);
-    }
-    g.items.push(l);
-  }
-  return out;
-}
+import { typeMeta, fmtDuration, groupByModule } from "@/shared/lib/lessonTypes";
 
 // Read-only "view the course as a student" — a lesson list + the selected
 // lesson's body. Rendered inside a <Modal>.

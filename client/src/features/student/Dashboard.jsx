@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Play,
-  ArrowRight,
   CalendarClock,
   Library,
   CheckCircle2,
@@ -19,13 +18,7 @@ import { StarsDisplay } from "@/shared/components/ui/Stars";
 import { useAuth } from "@/features/auth/AuthContext";
 import { typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
 import { kindMeta, dueLabel, isOverdue } from "@/shared/lib/assessments";
-
-const greet = () => {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-};
-
-const STATUS_TAG = { open: "tag-outline", answered: "tag-accent", resolved: "tag-neutral" };
+import { greet, DOUBT_STATUS_TAG } from "@/shared/lib/format";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -276,7 +269,7 @@ export default function Dashboard() {
                           <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
                             {d.course?.title || "Course"}
                           </span>
-                          <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")} style={{ flex: "none" }}>
+                          <span className={"tag " + (DOUBT_STATUS_TAG[d.status] || "tag-neutral")} style={{ flex: "none" }}>
                             {d.status}
                           </span>
                         </div>

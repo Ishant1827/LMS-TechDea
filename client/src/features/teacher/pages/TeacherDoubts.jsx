@@ -5,10 +5,8 @@ import { CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
+import { shortDate, DOUBT_STATUS_TAG } from "@/shared/lib/format";
 
-const STATUS_TAG = { open: "tag-outline", answered: "tag-accent", resolved: "tag-neutral" };
-const fmtDate = (d) =>
-  new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 function DoubtCard({ d, onSave }) {
   const [answer, setAnswer] = useState(d.answer || "");
@@ -26,9 +24,9 @@ function DoubtCard({ d, onSave }) {
         <strong style={{ fontSize: 13 }}>{d.student?.name || "Student"}</strong>
         <span className="muted-sm" style={{ flex: 1, minWidth: 0 }}>
           {d.course?.title}
-          {d.lesson?.title ? ` · ${d.lesson.title}` : ""} · {fmtDate(d.createdAt)}
+          {d.lesson?.title ? ` · ${d.lesson.title}` : ""} · {shortDate(d.createdAt)}
         </span>
-        <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")} style={{ flex: "none" }}>
+        <span className={"tag " + (DOUBT_STATUS_TAG[d.status] || "tag-neutral")} style={{ flex: "none" }}>
           {d.status}
         </span>
       </div>

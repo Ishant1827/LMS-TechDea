@@ -2,38 +2,8 @@ const Submission = require("./Submission.model");
 const Assessment = require("../assessments/Assessment.model");
 const Course = require("../courses/Course.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
-
-const canManage = (user, course) =>
-  user.role === "admin" || String(course.owner) === String(user._id);
-
-function percentOf(sub, a) {
-  if (sub.score == null) return null;
-  if (a.kind === "quiz") return Math.round(sub.score);
-  const max = a.points || 100;
-  return max ? Math.round((sub.score / max) * 100) : 0;
-}
-
-// The client-facing shape, identical for grading and for sending work back, so
-// the two cannot answer with different fields for the same record.
-function shapeSubmission(sub, assessment) {
-  const percent = percentOf(sub, assessment);
-  return {
-    _id: sub._id,
-    status: sub.status,
-    text: sub.text || "",
-    link: sub.link || "",
-    answers: sub.answers || [],
-    autoScore: sub.autoScore,
-    score: sub.score,
-    percent,
-    passed: percent == null ? null : percent >= (assessment.passPercent || 0),
-    feedback: sub.feedback || "",
-    submittedAt: sub.submittedAt,
-    gradedAt: sub.gradedAt,
-    returnedAt: sub.returnedAt,
-    student: sub.student,
-  };
-}
+const { canManage } = require("../../shared/utils/access");
+const { shapeSubmission } = require("./submission.shape");
 
 // GET /api/submissions/pending   (teacher/admin)
 //

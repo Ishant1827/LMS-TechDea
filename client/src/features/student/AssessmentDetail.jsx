@@ -9,8 +9,8 @@ import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { kindMeta, fmtDateTime, isOverdue } from "@/shared/lib/assessments";
 import { safeUrl } from "@/shared/lib/safeUrl";
+import { qCount } from "@/shared/lib/format";
 
-const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
 
 /* ── banner shown once a submission exists ───────────────────────────────── */
 function ResultBanner({ a, sub }) {

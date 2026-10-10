@@ -6,15 +6,12 @@ const Doubt = require("../doubts/Doubt.model");
 const Assessment = require("../assessments/Assessment.model");
 const Submission = require("../submissions/Submission.model");
 const User = require("../users/User.model");
+const { canManage } = require("../../shared/utils/access");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { DIFFICULTY } = require("../../shared/utils/constants");
 const { isSafeImageUrl } = require("../../shared/utils/url");
 
 const rx = (s) => new RegExp(String(s).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-
-function canManage(user, course) {
-  return user.role === "admin" || String(course.owner) === String(user._id);
-}
 
 // One 0..100 figure for a submission, whatever kind it is — the same rule the
 // assessments module uses. A quiz score is already a percentage; an assignment

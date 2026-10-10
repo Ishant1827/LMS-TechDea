@@ -103,4 +103,4 @@ function installSafeWrites(mongoose) {
   for (const name of mongoose.modelNames()) guardSchema(mongoose.model(name).schema);
 }
 
-module.exports = { installSafeWrites, guardSchema };
+module.exports = { installSafeWrites };

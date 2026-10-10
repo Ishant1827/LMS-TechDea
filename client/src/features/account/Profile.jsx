@@ -7,11 +7,9 @@ import PasswordInput from "@/shared/components/ui/PasswordInput";
 import { roleHome } from "@/shared/lib/roles";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useToast } from "@/shared/context/ToastContext";
-import { initials, cap } from "@/shared/lib/format";
+import { initials, cap, emailOk, phoneOk } from "@/shared/lib/format";
 import { passwordProblem, PASSWORD_HINT } from "@/shared/lib/password";
 
-const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
 
 export default function Profile() {
   const { user, patchUser, applyToken } = useAuth();

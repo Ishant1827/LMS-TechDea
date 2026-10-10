@@ -161,7 +161,7 @@ exports.setPassword = asyncHandler(async (req, res) => {
   await user.save();
 
   // No notification is sent: this path exists precisely because mail is off.
-  // When mail is on, the account should be told — see the gap in security.md.
+  // If mail ever returns, the account should be told.
   res.json({ message: `Password updated for ${user.name}. Tell them their new password.` });
 });
 
@@ -200,7 +200,7 @@ const BULK_ROLES = ["student", "teacher"];
 // With them there are 400, and the sign-in limiter allows eight attempts per
 // fifteen minutes — so guessing goes from trivial to roughly half a day of
 // sustained effort against one account. Still not a secret, and still worth
-// changing soon; recorded against B5 in security.md rather than left implied.
+// changing soon — which is why the account must replace it on first sign-in.
 const BRAND = "techdea";
 
 // Whitespace splits the name; anything that is not a letter or digit is dropped,

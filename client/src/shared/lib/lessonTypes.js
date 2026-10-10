@@ -18,6 +18,21 @@ export const fmtDuration = (min) => {
   return r ? `${h}h ${r}m` : `${h}h`;
 };
 
+// Lessons in curriculum order, grouped under their module label in the order
+// each module first appears: [{ name, items: [lesson, …] }, …].
+export function groupByModule(lessons) {
+  const out = [];
+  for (const l of lessons) {
+    let g = out.find((x) => x.name === l.module);
+    if (!g) {
+      g = { name: l.module, items: [] };
+      out.push(g);
+    }
+    g.items.push(l);
+  }
+  return out;
+}
+
 // Turn a YouTube / Vimeo watch URL into an embeddable one. Anything else is
 // returned unchanged (assumed already embeddable), "" if unparseable.
 export function toEmbedUrl(url = "") {

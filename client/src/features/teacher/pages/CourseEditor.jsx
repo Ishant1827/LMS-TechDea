@@ -10,7 +10,7 @@ import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { useAuth } from "@/features/auth/AuthContext";
-import { LESSON_TYPES, typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
+import { LESSON_TYPES, typeMeta, fmtDuration, groupByModule } from "@/shared/lib/lessonTypes";
 import { fileToResizedDataUrl } from "@/shared/lib/image";
 import ReadingEditor from "@/features/teacher/components/ReadingEditor";
 
@@ -352,19 +352,6 @@ const blankLesson = {
   fileUrl: "",
   fileName: "",
 };
-
-function groupByModule(lessons) {
-  const out = [];
-  for (const l of lessons) {
-    let g = out.find((x) => x.name === l.module);
-    if (!g) {
-      g = { name: l.module, items: [] };
-      out.push(g);
-    }
-    g.items.push(l);
-  }
-  return out;
-}
 
 function LessonManager({ courseId, lessons, setLessons }) {
   const toast = useToast();

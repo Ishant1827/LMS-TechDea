@@ -8,6 +8,7 @@ import Select from "@/shared/components/ui/Select";
 import { StarsDisplay } from "@/shared/components/ui/Stars";
 import { useToast } from "@/shared/context/ToastContext";
 import { fmtDuration } from "@/shared/lib/lessonTypes";
+import { cap } from "@/shared/lib/format";
 
 const SORTS = [
   ["newest", "Newest"],
@@ -17,7 +18,6 @@ const SORTS = [
   ["longest", "Longest"],
 ];
 const DIFFICULTIES = ["beginner", "intermediate", "advanced"];
-const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function Catalog() {
   const toast = useToast();

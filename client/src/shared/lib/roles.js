@@ -4,4 +4,3 @@ export function roleHome(role) {
   return "/";
 }
 
-export const isStaff = (role) => role === "teacher" || role === "admin";

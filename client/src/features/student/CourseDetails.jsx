@@ -10,23 +10,9 @@ import Modal from "@/shared/components/ui/Modal";
 import { StarsDisplay, StarsInput } from "@/shared/components/ui/Stars";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
-import { typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
+import { typeMeta, fmtDuration, groupByModule } from "@/shared/lib/lessonTypes";
+import { cap, shortDate } from "@/shared/lib/format";
 
-function groupByModule(lessons) {
-  const out = [];
-  for (const l of lessons) {
-    let g = out.find((x) => x.name === l.module);
-    if (!g) {
-      g = { name: l.module, items: [] };
-      out.push(g);
-    }
-    g.items.push(l);
-  }
-  return out;
-}
-
-const cap = (s = "") => s.charAt(0).toUpperCase() + s.slice(1);
-const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export default function CourseDetails() {
   const { id } = useParams();
@@ -297,7 +283,7 @@ export default function CourseDetails() {
                   <strong style={{ fontSize: 13 }}>{r.student?.name || "Student"}</strong>
                   <StarsDisplay value={r.rating} />
                   <span className="muted-sm" style={{ marginLeft: "auto" }}>
-                    {fmtDate(r.createdAt)}
+                    {shortDate(r.createdAt)}
                   </span>
                 </div>
                 {r.text && <p style={{ fontSize: 13, margin: "6px 0 0" }}>{r.text}</p>}

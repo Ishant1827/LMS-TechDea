@@ -19,7 +19,7 @@ Built as a MERN app and styled to match [learn.techdea.in](https://learn.techdea
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose%208-6D28D9?style=flat-square&logo=mongodb&logoColor=white)
 ![JWT](https://img.shields.io/badge/Auth-JWT-4C1D95?style=flat-square&logo=jsonwebtokens&logoColor=white)
 
-**[Quick start](#quick-start)** · **[Structure](#project-structure)** · **[API](#api-reference)** · **[Security baseline](docs/security.md)** · **[Deploy](#deployment)**
+**[Quick start](#quick-start)** · **[Structure](#project-structure)** · **[API](#api-reference)** · **[Security](#security)** · **[Deploy](#deployment)**
 
 </div>
 
@@ -44,7 +44,6 @@ lesson holds a link plus a display name, and the player renders accordingly.
 ```
 server/   Express API + Mongoose models   (port 5000)
 client/   React app (Vite)                (port 5173, proxies /api → 5000)
-docs/     security baseline, design notes, archived reference material
 ```
 
 ---
@@ -455,25 +454,25 @@ DELETE /api/users/:id                        (admin)
 
 ## Security
 
-📘 **[`docs/security.md`](docs/security.md) is the living security baseline.** It
-records what is *actually* implemented, traced to a file — not what is generally
-recommended. Read it before building anything, and update it when a change adds a
-rule, a decision or a gap.
-
 The shape, in short:
 
 ```
 Browser (React SPA)
    │  Bearer JWT in the Authorization header — token in localStorage
    ▼
-Express API   cors → json(3mb) → [rate limit] → protect → requireRole → controller
+Express API   helmet → cors → json(3mb) → [rate limit] → protect → requireRole → controller
    ▼
 MongoDB via Mongoose (schema-typed, strictQuery)
 ```
 
 - **Sessions** — the JWT carries a `tokenVersion`; bumping it on a password change
   or a deactivation refuses every token minted before it, so "I changed my
-  password because I was hacked" is actually true.
+  password because I was hacked" is actually true. Signing out revokes that one
+  token on the server as well.
+- **Passwords** — bcrypt cost 12; at least 8 characters with a letter and a number.
+- **Headers** — `helmet` on the API; the client gets a CSP (`script-src 'self'`)
+  and standard headers from `render.yaml`. CORS allows only `CLIENT_ORIGIN`, and
+  nothing at all when it is unset.
 - **Authorization** — two layers: `requireRole` for the role, then an ownership
   check inside the controller. Enrolment is an access gate; drafts and quiz answer
   keys stay hidden until the student has attempted.
@@ -500,15 +499,6 @@ for manual setup. Secrets (`MONGO_URI`, `JWT_SECRET`) are `sync: false` — set 
 in the dashboard. `CLIENT_ORIGIN` on the API and `VITE_API_URL` on the client must
 point at each other, and `VITE_API_URL` includes the `/api` path.
 
----
-
-## Docs
-
-| File | What it is |
-|---|---|
-| [`docs/security.md`](docs/security.md) | The living security baseline. Consult and update it on every change. |
-| [`docs/email.md`](docs/email.md) | Design reference for an email subsystem that is **not** in the code — kept for the day mail delivery becomes possible. |
-| [`docs/archive/`](docs/archive/) | Superseded reference material. Nothing here is imported or built. |
 
 <div align="center">
 <br>

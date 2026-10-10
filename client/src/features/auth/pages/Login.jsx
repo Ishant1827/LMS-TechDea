@@ -4,8 +4,8 @@ import AuthLayout from "@/features/auth/components/AuthLayout";
 import PasswordInput from "@/shared/components/ui/PasswordInput";
 import { useAuth } from "@/features/auth/AuthContext";
 import { roleHome } from "@/shared/lib/roles";
+import { emailOk } from "@/shared/lib/format";
 
-const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 export default function Login() {
   const { login } = useAuth();

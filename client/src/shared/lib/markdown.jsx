@@ -8,8 +8,7 @@ import { safeUrl } from "@/shared/lib/safeUrl";
  * of a lesson becomes a React element, so a teacher's text stays text — the
  * same XSS boundary the plain <div> gave us before, kept while gaining
  * formatting. Links are the one place a teacher's input reaches an attribute,
- * and they go through safeUrl() like every other link in the app (§4.1 of
- * docs/security.md).
+ * and they go through safeUrl() like every other link in the app.
  *
  * The subset is small on purpose. It covers what someone writing a lesson
  * actually reaches for, and each rule has to be explainable in one line to a

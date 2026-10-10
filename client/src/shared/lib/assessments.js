@@ -1,6 +1,6 @@
 import { ClipboardList, ListChecks } from "lucide-react";
 
-export const KIND_META = {
+const KIND_META = {
   assignment: { label: "Assignment", Icon: ClipboardList },
   quiz: { label: "Quiz", Icon: ListChecks },
 };

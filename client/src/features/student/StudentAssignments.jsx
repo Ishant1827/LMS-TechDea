@@ -14,9 +14,9 @@ import {
   STATE_TAG,
   STATE_LABEL,
 } from "@/shared/lib/assessments";
+import { qCount } from "@/shared/lib/format";
 
 const TABS = ["todo", "submitted", "graded", "all"];
-const qCount = (n) => `${n} question${n === 1 ? "" : "s"}`;
 
 export default function StudentAssignments() {
   const [tab, setTab] = useState("todo");

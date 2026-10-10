@@ -5,9 +5,8 @@ const Enrollment = require("../enrollments/Enrollment.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { ASSESSMENT_KINDS } = require("../../shared/utils/constants");
 const { isSafeUrl, LINK_ERROR } = require("../../shared/utils/url");
-
-const canManage = (user, course) =>
-  user.role === "admin" || String(course.owner) === String(user._id);
+const { canManage } = require("../../shared/utils/access");
+const { shapeSubmission } = require("../submissions/submission.shape");
 
 // A due date is an instant, and the instant a teacher means is Indian time.
 // The builder sends a full ISO string, so this is mostly a parse guard — but a
@@ -50,35 +49,6 @@ function gradeQuiz(questions, answers = []) {
 }
 
 // A single 0..100 figure for either kind (assignment score is out of `points`).
-function percentOf(sub, a) {
-  if (!sub || sub.score == null) return null;
-  if (a.kind === "quiz") return Math.round(sub.score);
-  const max = a.points || 100;
-  return max ? Math.round((sub.score / max) * 100) : 0;
-}
-
-// Client-facing submission object.
-function shapeSubmission(sub, a) {
-  if (!sub) return null;
-  const percent = percentOf(sub, a);
-  return {
-    _id: sub._id,
-    status: sub.status,
-    text: sub.text || "",
-    link: sub.link || "",
-    answers: sub.answers || [],
-    autoScore: sub.autoScore,
-    score: sub.score,
-    percent,
-    passed: percent == null ? null : percent >= (a.passPercent || 0),
-    feedback: sub.feedback || "",
-    submittedAt: sub.submittedAt,
-    gradedAt: sub.gradedAt,
-    returnedAt: sub.returnedAt,
-    student: sub.student, // populated where relevant
-  };
-}
-
 // Strip answer keys unless the caller is allowed to see them.
 function shapeQuestions(a, reveal) {
   return (a.questions || []).map((q) => ({

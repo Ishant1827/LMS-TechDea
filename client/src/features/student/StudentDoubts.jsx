@@ -3,15 +3,8 @@ import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import { CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
+import { shortDate, DOUBT_STATUS_TAG } from "@/shared/lib/format";
 
-const STATUS_TAG = {
-  open: "tag-outline",
-  answered: "tag-accent",
-  resolved: "tag-neutral",
-};
-
-const fmtDate = (d) =>
-  new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export default function StudentDoubts() {
   const { status, data: doubts, error, reload } = useLoad(() =>
@@ -55,12 +48,12 @@ export default function StudentDoubts() {
                 {d.course?.title || "Course"}
                 {d.lesson?.title ? ` · ${d.lesson.title}` : ""}
               </span>
-              <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")} style={{ marginLeft: "auto" }}>
+              <span className={"tag " + (DOUBT_STATUS_TAG[d.status] || "tag-neutral")} style={{ marginLeft: "auto" }}>
                 {d.status}
               </span>
             </div>
             <p style={{ fontSize: 14, margin: "6px 0 0" }}>{d.text}</p>
-            <div className="muted-sm">Asked {fmtDate(d.createdAt)}</div>
+            <div className="muted-sm">Asked {shortDate(d.createdAt)}</div>
 
             {d.answer && (
               <div

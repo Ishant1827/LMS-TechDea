@@ -7,9 +7,8 @@ import { Bar, CenterLoader, ErrorState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useIsNarrow } from "@/shared/hooks/useMediaQuery";
+import { shortDate } from "@/shared/lib/format";
 
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
 
 const idle = (days) =>
   days >= 9999 ? "never" : days === 0 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`;
@@ -70,7 +69,7 @@ export default function TeacherStudents() {
         r.enrolledCount,
         r.overall,
         r.completedCount,
-        fmtDate(r.lastActive),
+        shortDate(r.lastActive),
         r.stalled ? "yes" : "",
       ]
         .map(csvEscape)
@@ -224,7 +223,7 @@ export default function TeacherStudents() {
                 <Bar value={c.percent} />
               </div>
               <div className="muted-sm" style={{ marginTop: 3 }}>
-                {c.completed}/{c.total} lessons · {c.percent}% · active {fmtDate(c.lastActive)}
+                {c.completed}/{c.total} lessons · {c.percent}% · active {shortDate(c.lastActive)}
               </div>
             </div>
           ))}

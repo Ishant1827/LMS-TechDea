@@ -40,4 +40,4 @@ function passwordProblem(raw, { name = "", email = "" } = {}) {
   return "";
 }
 
-module.exports = { passwordProblem, PASSWORD_MIN: MIN };
+module.exports = { passwordProblem };

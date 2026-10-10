@@ -19,16 +19,10 @@ import Layout from "@/shared/components/layout/Layout";
 import { CenterLoader, ErrorState, Stat } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import { useAuth } from "@/features/auth/AuthContext";
-import { initials } from "@/shared/lib/format";
+import { initials, greet, DOUBT_STATUS_TAG } from "@/shared/lib/format";
 
-const greet = () => {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-};
 const today = () =>
   new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
-
-const STATUS_TAG = { open: "tag-outline", answered: "tag-accent", resolved: "tag-neutral" };
 
 const JUMP = [
   ["/manage", Library, "Courses"],
@@ -207,7 +201,7 @@ export default function TeacherDashboard() {
                     <span className="dr-meta">
                       <span className="who">{d.student?.name || "Student"}</span>
                       <span className="where">{d.course?.title}</span>
-                      <span className={"tag " + (STATUS_TAG[d.status] || "tag-neutral")}>{d.status}</span>
+                      <span className={"tag " + (DOUBT_STATUS_TAG[d.status] || "tag-neutral")}>{d.status}</span>
                     </span>
                     <span className="dr-text">{d.text}</span>
                   </span>
