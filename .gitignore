@@ -31,3 +31,9 @@ Thumbs.db
 *.sln
 *.swp
 
+
+# Temporary reference copy of the learn.techdea.in store (to be deleted)
+Learn Techdea/
+
+# Local planning document, not part of the app
+LMS-Integration-Plan.pdf
