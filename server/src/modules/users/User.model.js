@@ -40,12 +40,27 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// 12 is the current norm (G13, closed 2026-10-10). Each step doubles the work,
+// for an attacker cracking a leaked hash and for us on every sign-in: about
+// 0.6s per hash with bcryptjs on a small instance, against 0.15s at 10.
+const BCRYPT_COST = 12;
+
 userSchema.methods.setPassword = async function (plain) {
-  this.passwordHash = await bcrypt.hash(String(plain), 10);
+  this.passwordHash = await bcrypt.hash(String(plain), BCRYPT_COST);
 };
 
 userSchema.methods.checkPassword = function (plain) {
   return bcrypt.compare(String(plain), this.passwordHash);
+};
+
+// Hashes written before the cost went up stay at 10 until something rewrites
+// them. Sign-in is the one moment we hold the plaintext of an account that is
+// not changing its password, so it is where an old hash is quietly upgraded.
+// Returns whether it did, so the caller knows to save.
+userSchema.methods.upgradeHashIfNeeded = async function (plain) {
+  if (bcrypt.getRounds(this.passwordHash) >= BCRYPT_COST) return false;
+  await this.setPassword(plain);
+  return true;
 };
 
 userSchema.methods.toJSON = function () {

@@ -70,9 +70,17 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  // Signs out here at once, then asks the server to revoke the token, so a copy
+  // taken before sign-out stops working too (G2). The header is passed by hand
+  // because the stored token is already gone; a failure is ignored — the user
+  // is signed out on this device either way.
   const logout = () => {
+    const token = localStorage.getItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
+    if (token) {
+      api.post("/auth/logout", null, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    }
   };
 
   const patchUser = (u) => setUser(u);

@@ -4,6 +4,7 @@ import AuthLayout from "@/features/auth/components/AuthLayout";
 import PasswordInput from "@/shared/components/ui/PasswordInput";
 import api from "@/shared/api/client";
 import { useAuth } from "@/features/auth/AuthContext";
+import { passwordProblem, PASSWORD_HINT } from "@/shared/lib/password";
 
 /**
  * Shown instead of the whole app when the account is still carrying a password
@@ -32,7 +33,8 @@ export default function ForcePasswordChange() {
     setErr("");
 
     if (!form.current) return setErr("Enter the password you were given");
-    if (form.next.length < 6) return setErr("Your new password must be at least 6 characters");
+    const weak = passwordProblem(form.next, user || {});
+    if (weak) return setErr(`New password: ${weak.charAt(0).toLowerCase()}${weak.slice(1)}`);
     if (form.next === form.current) return setErr("Choose something different from the one you were given");
     if (form.next !== form.confirm) return setErr("The two new passwords don't match");
 
@@ -89,7 +91,7 @@ export default function ForcePasswordChange() {
             value={form.next}
             onChange={set("next")}
           />
-          <div className="muted-sm" style={{ marginTop: 4 }}>At least 6 characters.</div>
+          <div className="muted-sm" style={{ marginTop: 4 }}>{PASSWORD_HINT}</div>
         </div>
 
         <div className="field">

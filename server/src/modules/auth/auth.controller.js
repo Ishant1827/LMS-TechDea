@@ -1,16 +1,18 @@
 const User = require("../users/User.model");
 const Course = require("../courses/Course.model");
+const RevokedToken = require("./RevokedToken.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { signToken } = require("../../shared/utils/token");
+const { passwordProblem } = require("../../shared/utils/password");
+
 // POST /api/auth/register  — always creates a student
 exports.register = asyncHandler(async (req, res) => {
   const { name, email, password, phone } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email and password are required" });
   }
-  if (String(password).length < 6) {
-    return res.status(400).json({ message: "Password must be at least 6 characters" });
-  }
+  const weak = passwordProblem(password, { name, email });
+  if (weak) return res.status(400).json({ message: weak });
   const exists = await User.findOne({ email: String(email).toLowerCase() });
   if (exists) return res.status(409).json({ message: "An account with that email already exists" });
 
@@ -29,8 +31,24 @@ exports.login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: "Wrong email or password" });
   }
   if (!user.active) return res.status(403).json({ message: "This account is deactivated" });
+  if (await user.upgradeHashIfNeeded(password)) await user.save();
 
   res.json({ token: signToken(user), user });
+});
+
+// POST /api/auth/logout — ends this token only; the account's other sessions
+// carry on. ("Sign out everywhere" is what a password change already does.)
+exports.logout = asyncHandler(async (req, res) => {
+  const { jti, exp } = req.token;
+  if (jti) {
+    // Upsert, so signing out twice with the same token is not an error.
+    await RevokedToken.updateOne(
+      { jti },
+      { $setOnInsert: { jti, expiresAt: new Date(exp * 1000) } },
+      { upsert: true }
+    );
+  }
+  res.json({ message: "Signed out" });
 });
 
 // GET /api/auth/me
@@ -70,9 +88,8 @@ exports.changePassword = asyncHandler(async (req, res) => {
   if (!(await req.user.checkPassword(currentPassword || ""))) {
     return res.status(400).json({ message: "Current password is incorrect" });
   }
-  if (String(newPassword || "").length < 6) {
-    return res.status(400).json({ message: "New password must be at least 6 characters" });
-  }
+  const weak = passwordProblem(newPassword, req.user);
+  if (weak) return res.status(400).json({ message: weak });
   await req.user.setPassword(newPassword);
 
   // Same reasoning as the reset path: other sessions end. The difference is

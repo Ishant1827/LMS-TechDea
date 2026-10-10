@@ -4,6 +4,7 @@ import AuthLayout from "@/features/auth/components/AuthLayout";
 import PasswordInput from "@/shared/components/ui/PasswordInput";
 import { useAuth } from "@/features/auth/AuthContext";
 import { roleHome } from "@/shared/lib/roles";
+import { passwordProblem, PASSWORD_HINT } from "@/shared/lib/password";
 
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
@@ -38,9 +39,7 @@ export default function Signup() {
     phone: phoneOk(form.phone) ? "" : "Enter a valid phone number",
     password: !form.password
       ? "Password is required"
-      : form.password.length < 6
-      ? "At least 6 characters"
-      : "",
+      : passwordProblem(form.password, form),
     // check "empty" before "mismatch" — an untouched field isn't a mismatch
     confirm: !form.confirm
       ? "Re-enter your password"
@@ -135,7 +134,7 @@ export default function Signup() {
           {showErr("password") ? (
             <div className="field-err">{errors.password}</div>
           ) : (
-            <div className="muted-sm" style={{ marginTop: 4 }}>At least 6 characters.</div>
+            <div className="muted-sm" style={{ marginTop: 4 }}>{PASSWORD_HINT}</div>
           )}
         </div>
 

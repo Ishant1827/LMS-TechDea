@@ -10,6 +10,7 @@ import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { cap } from "@/shared/lib/format";
+import { passwordProblem, PASSWORD_HINT } from "@/shared/lib/password";
 import { useIsNarrow } from "@/shared/hooks/useMediaQuery";
 
 export default function AdminUsers() {
@@ -156,7 +157,8 @@ export default function AdminUsers() {
   const savePassword = async (e) => {
     e.preventDefault();
     setPwErr("");
-    if (newPw.length < 6) return setPwErr("At least 6 characters");
+    const weak = passwordProblem(newPw, pwFor);
+    if (weak) return setPwErr(weak);
 
     setSavingPw(true);
     try {
@@ -494,13 +496,13 @@ export default function AdminUsers() {
                   setPwErr("");
                 }}
               />
-              <div className="muted-sm" style={{ marginTop: 4 }}>At least 6 characters.</div>
+              <div className="muted-sm" style={{ marginTop: 4 }}>{PASSWORD_HINT}</div>
             </div>
 
             <div className="form-actions">
               <button
                 className={"btn btn-primary" + (savingPw ? " is-loading" : "")}
-                disabled={savingPw || newPw.length < 6}
+                disabled={savingPw || newPw.length < 8}
               >
                 Set password
               </button>

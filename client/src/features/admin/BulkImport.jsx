@@ -17,10 +17,10 @@ import { useToast } from "@/shared/context/ToastContext";
  * rather than a half-finished import you have to unpick.
  */
 
-// The server refuses more than 50 per request, and hashing a password costs
-// about 150ms — so large imports go up in pieces, with the progress visible
+// The server refuses more than 20 per request, and hashing a password costs
+// about 0.6s — so large imports go up in pieces, with the progress visible
 // rather than a spinner that looks like it has hung.
-const CHUNK = 25;
+const CHUNK = 10;
 
 const NAME_MIN = 2;
 const NAME_MAX = 80;

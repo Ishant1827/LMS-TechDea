@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../../modules/users/User.model");
+const RevokedToken = require("../../modules/auth/RevokedToken.model");
 
 function readToken(req) {
   const header = req.headers.authorization || "";
@@ -12,12 +13,18 @@ function readToken(req) {
 const DURING_FORCED_CHANGE = new Set([
   "GET /api/auth/me",
   "PUT /api/auth/me/password",
+  "POST /api/auth/logout",
 ]);
 
 const wayThrough = (req) =>
   DURING_FORCED_CHANGE.has(`${req.method} ${req.originalUrl.split("?")[0].replace(/\/+$/, "")}`);
 
-// Require a valid token. Populates req.user.
+// Signed out by its holder (G2). Tokens minted before ids were added carry no
+// `jti`; they cannot be listed, and simply run out within JWT_EXPIRES.
+const isRevoked = async (payload) => !!payload.jti && !!(await RevokedToken.exists({ jti: payload.jti }));
+
+// Require a valid token. Populates req.user, and req.token with the verified
+// claims (logout needs its id and expiry).
 async function protect(req, res, next) {
   try {
     const token = readToken(req);
@@ -35,6 +42,9 @@ async function protect(req, res, next) {
     if ((payload.tv ?? 0) !== (user.tokenVersion || 0)) {
       return res.status(401).json({ message: "Your session has ended — sign in again" });
     }
+    if (await isRevoked(payload)) {
+      return res.status(401).json({ message: "You signed out of this session — sign in again" });
+    }
 
     // A password chosen by an admin is not yet a password only this person
     // knows, so the account is held here until they replace it. 403 with a code
@@ -48,6 +58,7 @@ async function protect(req, res, next) {
     }
 
     req.user = user;
+    req.token = payload;
     next();
   } catch (e) {
     return res.status(401).json({ message: "Your session has expired — sign in again" });
@@ -63,7 +74,9 @@ async function optionalAuth(req, res, next) {
       const user = await User.findById(payload.id);
       // Same check as protect. A revoked token must not quietly grant the
       // signed-in view of a public page either.
-      if (user && user.active && (payload.tv ?? 0) === (user.tokenVersion || 0)) req.user = user;
+      if (user && user.active && (payload.tv ?? 0) === (user.tokenVersion || 0) && !(await isRevoked(payload))) {
+        req.user = user;
+      }
     }
   } catch (e) {
     /* ignore — treat as anonymous */

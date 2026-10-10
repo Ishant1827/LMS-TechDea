@@ -7,6 +7,7 @@ const Doubt = require("../doubts/Doubt.model");
 const Review = require("../reviews/Review.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { ROLES } = require("../../shared/utils/constants");
+const { passwordProblem } = require("../../shared/utils/password");
 
 // GET /api/users?role=&q=
 exports.list = asyncHandler(async (req, res) => {
@@ -41,9 +42,8 @@ exports.create = asyncHandler(async (req, res) => {
   if (!ROLES.includes(role)) {
     return res.status(400).json({ message: "Role must be student, teacher or admin" });
   }
-  if (String(password).length < 6) {
-    return res.status(400).json({ message: "Password must be at least 6 characters" });
-  }
+  const weak = passwordProblem(password, { name, email });
+  if (weak) return res.status(400).json({ message: weak });
   if (await User.findOne({ email: email.toLowerCase() })) {
     return res.status(409).json({ message: "Email already in use" });
   }
@@ -142,12 +142,11 @@ exports.remove = asyncHandler(async (req, res) => {
 exports.setPassword = asyncHandler(async (req, res) => {
   const { password } = req.body;
 
-  if (String(password || "").length < 6) {
-    return res.status(400).json({ message: "Password must be at least 6 characters" });
-  }
-
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ message: "User not found" });
+
+  const weak = passwordProblem(password, user);
+  if (weak) return res.status(400).json({ message: weak });
 
   await user.setPassword(password);
 
@@ -178,10 +177,10 @@ exports.setPassword = asyncHandler(async (req, res) => {
 
 const crypto = require("crypto");
 
-// Hashing is the cost here — bcrypt at cost 10 runs about 150ms per password,
-// so a request is capped at something that finishes in a few seconds on a small
-// instance. The client sends larger imports in chunks.
-const MAX_PER_REQUEST = 50;
+// Hashing is the cost here — bcrypt at cost 12 runs about 0.6s per password,
+// so a request is capped at something that finishes in several seconds on a
+// small instance. The client sends larger imports in chunks of 10.
+const MAX_PER_REQUEST = 20;
 
 const NAME_MIN = 2;
 const NAME_MAX = 80;

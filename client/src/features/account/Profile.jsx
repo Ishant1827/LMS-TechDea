@@ -8,6 +8,7 @@ import { roleHome } from "@/shared/lib/roles";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useToast } from "@/shared/context/ToastContext";
 import { initials, cap } from "@/shared/lib/format";
+import { passwordProblem, PASSWORD_HINT } from "@/shared/lib/password";
 
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const phoneOk = (v) => !v.trim() || /^[\d+\-\s()]{6,20}$/.test(v.trim());
@@ -47,11 +48,8 @@ export default function Profile() {
     currentPassword: pw.currentPassword ? "" : "Enter your current password",
     newPassword: !pw.newPassword
       ? "Choose a new password"
-      : pw.newPassword.length < 6
-      ? "At least 6 characters"
-      : pw.newPassword === pw.currentPassword
-      ? "Pick something different from your current password"
-      : "",
+      : passwordProblem(pw.newPassword, user || {}) ||
+        (pw.newPassword === pw.currentPassword ? "Pick something different from your current password" : ""),
     confirm: !pw.confirm
       ? "Re-enter your new password"
       : pw.confirm !== pw.newPassword
@@ -256,7 +254,7 @@ export default function Profile() {
               <div className="field-err">{pwErrors.newPassword}</div>
             ) : (
               <div className="muted-sm" style={{ marginTop: 4 }}>
-                At least 6 characters.
+                {PASSWORD_HINT}
               </div>
             )}
           </div>

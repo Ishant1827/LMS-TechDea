@@ -5,6 +5,7 @@ const { loginLimiter, registerLimiter, passwordLimiter } = require("../../shared
 
 router.post("/register", registerLimiter, c.register);
 router.post("/login", loginLimiter, c.login);
+router.post("/logout", protect, c.logout);
 router.get("/me", protect, c.me);
 router.put("/me", protect, c.updateMe);
 router.put("/me/password", protect, passwordLimiter, c.changePassword);
