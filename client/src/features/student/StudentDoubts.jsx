@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { CenterLoader, ErrorState, EmptyState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import { shortDate, DOUBT_STATUS_TAG } from "@/shared/lib/format";
 
@@ -31,15 +31,14 @@ export default function StudentDoubts() {
       <h2 className="page-title">Doubts</h2>
 
       {doubts.length === 0 ? (
-        <div className="card elev-sm" style={{ alignItems: "flex-start" }}>
-          <div className="card-title">No doubts yet</div>
-          <div className="card-meta" style={{ marginBottom: 10 }}>
-            Open a lesson and use “Ask a doubt” to send a question to your teacher.
-          </div>
+        <EmptyState
+          title="No doubts yet"
+          text="Open a lesson and use “Ask a doubt” to send a question to your teacher."
+        >
           <Link className="btn btn-primary" to="/my-learning">
             Go to My Learning
           </Link>
-        </div>
+        </EmptyState>
       ) : (
         doubts.map((d) => (
           <div key={d._id} className="card elev-sm" style={{ marginBottom: 10 }}>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { CenterLoader, ErrorState, EmptyState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
@@ -153,7 +153,10 @@ export default function TeacherDoubts() {
       </div>
 
       {shown.length === 0 ? (
-        <p className="muted-sm">Nothing here.</p>
+        <EmptyState
+          title={tab === "open" ? "No open doubts" : "Nothing here"}
+          text={tab === "open" ? "You're all caught up — new questions from students land here." : "No doubts match this tab."}
+        />
       ) : (
         <div style={{ maxWidth: 760 }}>
           {shown.map((d) => (

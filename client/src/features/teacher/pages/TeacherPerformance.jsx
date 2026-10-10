@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { CenterLoader, ErrorState, CountUp } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { kindMeta } from "@/shared/lib/assessments";
@@ -48,10 +48,10 @@ export default function TeacherPerformance() {
 
   return (
     <Layout>
-      <div className="row" style={{ marginBottom: 16 }}>
+      <div className="row head-with-picker" style={{ marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>Performance</h2>
         {courses.length > 0 && (
-          <div style={{ maxWidth: 260, marginLeft: "auto", width: "100%" }}>
+          <div className="head-picker">
             <Select
               aria-label="Course"
               value={courseId}
@@ -71,26 +71,26 @@ export default function TeacherPerformance() {
           onRetry={perfLoad.reload}
         />
       ) : !perf ? (
-        <CenterLoader />
+        <CenterLoader variant="rows" />
       ) : perf.enrolled === 0 ? (
         <p className="muted-sm">No one has enrolled in this course yet.</p>
       ) : (
         <>
           <div className="stat-strip">
             <div className="card elev-sm stat">
-              <div className="card-title">{perf.enrolled}</div>
+              <div className="card-title"><CountUp value={perf.enrolled} /></div>
               <div className="card-meta">Enrolled</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{perf.active7}</div>
+              <div className="card-title"><CountUp value={perf.active7} /></div>
               <div className="card-meta">Active this week</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{perf.completionRate}%</div>
+              <div className="card-title"><CountUp value={perf.completionRate} />%</div>
               <div className="card-meta">Finished the course</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{perf.avgPercent}%</div>
+              <div className="card-title"><CountUp value={perf.avgPercent} />%</div>
               <div className="card-meta">Avg content progress</div>
             </div>
           </div>

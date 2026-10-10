@@ -1,6 +1,6 @@
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { Bar, CenterLoader, ErrorState } from "@/shared/components/ui";
+import { Bar, CenterLoader, ErrorState, CountUp } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 
 export default function ProgressPage() {
@@ -36,7 +36,7 @@ export default function ProgressPage() {
       <h4 className="page-title">Progress</h4>
       <div className="grid-3" style={{ marginBottom: 20 }}>
         <div className="card elev-sm stat">
-          <div className="card-title">{overall}%</div>
+          <div className="card-title"><CountUp value={overall} />%</div>
           <div className="card-meta">Overall Progress</div>
         </div>
         <div className="card elev-sm stat">
@@ -46,7 +46,7 @@ export default function ProgressPage() {
           <div className="card-meta">Lessons Completed</div>
         </div>
         <div className="card elev-sm stat">
-          <div className="card-title">{list.length}</div>
+          <div className="card-title"><CountUp value={list.length} /></div>
           <div className="card-meta">Courses Enrolled</div>
         </div>
       </div>

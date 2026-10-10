@@ -10,6 +10,7 @@ import {
   TrendingUp,
   MessageCircleQuestion,
   BarChart3,
+  Home,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import AccountMenu from "@/shared/components/layout/AccountMenu";
@@ -61,6 +62,21 @@ const TEACHER_NAV = [
 // Admin = teacher workspace + admin-only sections.
 const ADMIN_EXTRA = [["Admin", [["/admin/users", "Users", Users, false]]]];
 
+// Phone bottom bar: the four places people go most, plus "More" for the full
+// drawer. Labels are short on purpose — they share 375px five ways.
+const STUDENT_TABS = [
+  ["/", "Home", Home, true],
+  ["/courses", "Courses", Compass, false],
+  ["/my-learning", "Learning", BookOpen, false],
+  ["/assignments", "Tasks", ClipboardList, false],
+];
+const TEACHER_TABS = [
+  ["/teach", "Home", Home, true],
+  ["/manage", "Courses", BookOpen, false],
+  ["/teach/assignments", "Tasks", ClipboardList, false],
+  ["/teach/students", "Students", Users, false],
+];
+
 function navForRole(role) {
   if (role === "student") return STUDENT_NAV;
   if (role === "admin") return [...TEACHER_NAV, ...ADMIN_EXTRA];
@@ -72,6 +88,7 @@ export default function Layout({ children, bodyClass = "" }) {
   const [drawer, setDrawer] = useState(false);
 
   const groups = navForRole(user.role);
+  const tabs = user.role === "student" ? STUDENT_TABS : TEACHER_TABS;
 
   return (
     <div className="app">
@@ -114,13 +131,6 @@ export default function Layout({ children, bodyClass = "" }) {
 
       <div className="main">
         <header className="topbar">
-          <button
-            className="icon-btn menu-btn"
-            onClick={() => setDrawer(true)}
-            aria-label="Menu"
-          >
-            <Menu />
-          </button>
           {/* Below 900px the sidebar is off-canvas, so this is the only place
               the brand is visible without opening the menu. */}
           <Link className="brand topbar-brand" to={roleHome(user.role)}>
@@ -131,6 +141,32 @@ export default function Layout({ children, bodyClass = "" }) {
         </header>
         <main className={"body " + bodyClass}>{children}</main>
       </div>
+
+      {/* Phone-only (≤900px). "More" opens the same drawer the sidebar
+          becomes, so every destination stays reachable. */}
+      <nav className="tabbar" aria-label="Primary">
+        {tabs.map(([to, label, Icon, end]) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) => "tab" + (isActive ? " on" : "")}
+          >
+            <Icon aria-hidden="true" />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+        <button
+          type="button"
+          className={"tab" + (drawer ? " on" : "")}
+          onClick={() => setDrawer(true)}
+          aria-label="More pages"
+          aria-expanded={drawer}
+        >
+          <Menu aria-hidden="true" />
+          <span>More</span>
+        </button>
+      </nav>
     </div>
   );
 }

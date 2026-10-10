@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, Download, FileSpreadsheet } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, X } from "lucide-react";
 import api from "@/shared/api/client";
 import { useToast } from "@/shared/context/ToastContext";
 
@@ -101,7 +101,7 @@ function download(filename, text) {
 const csvCell = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 const toCsv = (rows) => rows.map((r) => r.map(csvCell).join(",")).join("\n");
 
-export default function BulkImport({ onImported }) {
+export default function BulkImport({ onImported, onClose }) {
   const toast = useToast();
   const fileRef = useRef(null);
 
@@ -223,8 +223,15 @@ export default function BulkImport({ onImported }) {
     );
 
   return (
-    <div className="card elev-sm" style={{ marginBottom: 20 }}>
-      <div className="card-kicker">Import from a spreadsheet</div>
+    <div className="card elev-sm panel-card" style={{ marginBottom: 20 }}>
+      <div className="panel-card-head">
+        <div className="card-kicker">Import from a spreadsheet</div>
+        {onClose && (
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+            <X />
+          </button>
+        )}
+      </div>
 
       {err && <div className="form-error">{err}</div>}
 

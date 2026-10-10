@@ -133,7 +133,7 @@ export default function Profile() {
 
   return (
     <Layout>
-      <button type="button" className="back" onClick={goBack} style={{ marginBottom: 14 }}>
+      <button type="button" className="page-back" onClick={goBack}>
         <ArrowLeft />
         Back
       </button>

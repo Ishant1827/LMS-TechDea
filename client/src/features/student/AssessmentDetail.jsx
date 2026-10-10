@@ -320,8 +320,8 @@ export default function AssessmentDetail() {
   if (status === "error")
     return (
       <Layout>
-        <button className="back" onClick={() => nav("/assignments")}>
-          <ArrowLeft /> Assignments
+        <button className="page-back" onClick={() => nav("/assignments")}>
+          <ArrowLeft /> Back to assignments
         </button>
         {error.status === 404 || error.status === 403 ? (
           <p className="muted-sm">Couldn't load this — it may have been removed or unpublished.</p>
@@ -343,8 +343,8 @@ export default function AssessmentDetail() {
 
   return (
     <Layout>
-      <button className="back" onClick={() => nav("/assignments")} style={{ marginBottom: 14 }}>
-        <ArrowLeft /> Assignments
+      <button className="page-back" onClick={() => nav("/assignments")}>
+        <ArrowLeft /> Back to assignments
       </button>
 
       <div className="asmt-detail-head">

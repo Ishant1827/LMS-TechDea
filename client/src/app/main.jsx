@@ -9,6 +9,9 @@ import { AuthProvider } from "@/features/auth/AuthContext";
 import { ToastProvider } from "@/shared/context/ToastContext";
 import { ConfirmProvider } from "@/shared/context/ConfirmContext";
 import App from "./App.jsx";
+import { installRipple } from "@/shared/lib/ripple";
+
+installRipple();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -10,4 +10,5 @@
 @import "./app-shell.css";       /* sidebar, top bar, page frame, loaders */
 @import "./auth.css";            /* login / signup / forgot-password */
 @import "./screens.css";         /* every screen inside the shell */
-@import "./responsive.css";      /* phone breakpoints, last so they win */
+@import "./responsive.css";      /* phone breakpoints */
+@import "./refresh.css";         /* responsive design pass — tab bar, fluid type, sheets; last so it wins */

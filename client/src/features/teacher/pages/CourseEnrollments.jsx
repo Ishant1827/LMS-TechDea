@@ -44,11 +44,11 @@ export default function CourseEnrollments() {
 
   return (
     <Layout>
+      <Link className="page-back" to="/manage">
+        <ArrowLeft />
+        Back to courses
+      </Link>
       <div className="row" style={{ marginBottom: 16 }}>
-        <Link className="back" to="/manage">
-          <ArrowLeft />
-          Courses
-        </Link>
         <h2 style={{ margin: 0 }}>{data.course.title} — Students</h2>
       </div>
       <p className="text-muted" style={{ marginBottom: 12 }}>

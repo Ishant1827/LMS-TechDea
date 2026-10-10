@@ -5,11 +5,55 @@ const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
 
 const TOKEN_KEY = "techdea-token";
+// The last user /auth/me returned, so a returning visitor gets the app frame
+// at once instead of a splash while the server answers. It only decides what
+// to draw first: every request is still checked by the server, and the
+// background /auth/me below replaces it (or signs out) as soon as it answers.
+const USER_KEY = "techdea-user";
+// Set at sign-in, read once by WelcomeScreen: { first: boolean }.
+export const WELCOME_KEY = "techdea-welcome";
+
+const readCachedUser = () => {
+  try {
+    if (!localStorage.getItem(TOKEN_KEY)) return null;
+    return JSON.parse(localStorage.getItem(USER_KEY) || "null");
+  } catch {
+    return null;
+  }
+};
+const cacheUser = (u) => {
+  try {
+    if (u) localStorage.setItem(USER_KEY, JSON.stringify(u));
+    else localStorage.removeItem(USER_KEY);
+  } catch {
+    /* storage blocked — we just lose the fast start */
+  }
+};
+
+// Remember that this person has signed in on this device before, so the
+// welcome can tell a first visit ("Welcome to TechDea") from a return.
+const seenKey = (id) => `techdea-seen-${id}`;
+const queueWelcome = (u, { forceFirst = false } = {}) => {
+  if (!u || u.mustChangePassword) return; // they get the password screen first
+  try {
+    const first = forceFirst || !localStorage.getItem(seenKey(u._id));
+    localStorage.setItem(seenKey(u._id), "1");
+    sessionStorage.setItem(WELCOME_KEY, JSON.stringify({ first }));
+  } catch {
+    /* no storage, no welcome — harmless */
+  }
+};
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUserState] = useState(readCachedUser);
+  // only block on the boot check when there's nothing remembered to draw
+  const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY) && !readCachedUser());
   const [bootError, setBootError] = useState(null); // couldn't verify the session
+
+  const setUser = useCallback((u) => {
+    setUserState(u);
+    cacheUser(u);
+  }, []);
 
   const setToken = (token) => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
@@ -21,7 +65,8 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    const remembered = !!readCachedUser();
+    if (!remembered) setLoading(true);
     setBootError(null);
     try {
       const { data } = await api.get("/auth/me");
@@ -33,13 +78,15 @@ export function AuthProvider({ children }) {
       if (e.status === 401 || e.status === 403) {
         setToken(null);
         setUser(null);
-      } else {
+      } else if (!remembered) {
+        // with a remembered user the app is already usable; each page shows
+        // its own error if the server stays unreachable
         setBootError(e);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setUser]);
 
   useEffect(() => {
     loadMe();
@@ -59,6 +106,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
     setToken(data.token);
+    queueWelcome(data.user);
     setUser(data.user);
     return data.user;
   };
@@ -66,6 +114,7 @@ export function AuthProvider({ children }) {
   const register = async (payload) => {
     const { data } = await api.post("/auth/register", payload);
     setToken(data.token);
+    queueWelcome(data.user, { forceFirst: true });
     setUser(data.user);
     return data.user;
   };

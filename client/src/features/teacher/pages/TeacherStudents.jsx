@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import Modal from "@/shared/components/ui/Modal";
-import { Bar, CenterLoader, ErrorState } from "@/shared/components/ui";
+import { Bar, CenterLoader, ErrorState, CountUp } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { useIsNarrow } from "@/shared/hooks/useMediaQuery";
@@ -88,30 +88,34 @@ export default function TeacherStudents() {
     <Layout>
       <h2 className="page-title">Students</h2>
 
-      <div className="stat-strip" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+      <div className="stat-strip stat-strip--3">
         <div className="card elev-sm stat">
-          <div className="card-title">{rows.length}</div>
+          <div className="card-title"><CountUp value={rows.length} /></div>
           <div className="card-meta">Students</div>
         </div>
         <div className="card elev-sm stat">
-          <div className="card-title">{stalled}</div>
-          <div className="card-meta">Stalled (14d+ idle)</div>
+          <div className="card-title"><CountUp value={stalled} /></div>
+          <div className="card-meta">Stalled · 14d+ idle</div>
         </div>
         <div className="card elev-sm stat">
-          <div className="card-title">{avg}%</div>
+          <div className="card-title"><CountUp value={avg} />%</div>
           <div className="card-meta">Avg progress</div>
         </div>
       </div>
 
-      <div className="row" style={{ marginBottom: 12 }}>
-        <input
-          className="input"
-          style={{ maxWidth: 240 }}
-          placeholder="Search name or email"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <div style={{ maxWidth: 190, flex: "1 1 150px" }}>
+      <div className="list-toolbar">
+        <label className="search-field">
+          <Search aria-hidden="true" />
+          <input
+            className="input"
+            type="search"
+            placeholder="Search name or email"
+            aria-label="Search students"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </label>
+        <div className="lt-filter">
           <Select
             aria-label="Filter students"
             value={filter}
@@ -124,7 +128,7 @@ export default function TeacherStudents() {
             ]}
           />
         </div>
-        <button className="btn btn-secondary" style={{ marginLeft: "auto" }} onClick={exportCsv}>
+        <button className="btn btn-secondary lt-action" onClick={exportCsv}>
           <Download />
           Export CSV
         </button>

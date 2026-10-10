@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Search, Upload, UserPlus, X } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import { CenterLoader, ErrorState } from "@/shared/components/ui";
@@ -21,6 +22,10 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState("");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
+  // "create" | "import" | null — the forms open on demand so the list of
+  // people, which is what this page is for, is the first thing you see
+  const [panel, setPanel] = useState(null);
+  const toggle = (name) => setPanel((p) => (p === name ? null : name));
 
   // Resetting somebody's password. Kept as its own dialog rather than an inline
   // field, because it is the one action here that hands over an account.
@@ -195,60 +200,93 @@ export default function AdminUsers() {
 
   return (
     <Layout>
-      <h2 className="page-title">Users</h2>
-
-      <form onSubmit={create} className="card elev-sm" style={{ marginBottom: 20, maxWidth: 640 }}>
-        <div className="card-kicker">Create an account</div>
-        <div className="form-grid">
-          <div className="field">
-            <label>Name</label>
-            <input className="input" value={draft.name} onChange={set("name")} />
-          </div>
-          <div className="field">
-            <label>Email</label>
-            <input className="input" type="email" value={draft.email} onChange={set("email")} />
-          </div>
-          <div className="field">
-            <label>Temp password</label>
-            <input className="input" value={draft.password} onChange={set("password")} />
-          </div>
-          <div className="field">
-            <label>Role</label>
-            <Select
-              aria-label="Role"
-              value={draft.role}
-              onChange={(v) => setDraft((d) => ({ ...d, role: v }))}
-              options={[
-                { value: "student", label: "Student" },
-                { value: "teacher", label: "Teacher" },
-                { value: "admin", label: "Admin" },
-              ]}
-            />
-          </div>
+      <div className="head-with-actions">
+        <h2>Users</h2>
+        <div className="head-actions">
+          <button
+            type="button"
+            className={"btn btn-secondary" + (panel === "import" ? " is-active" : "")}
+            onClick={() => toggle("import")}
+            aria-expanded={panel === "import"}
+          >
+            <Upload />
+            Import CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => toggle("create")}
+            aria-expanded={panel === "create"}
+          >
+            <UserPlus />
+            Add user
+          </button>
         </div>
-        <p className="muted-sm" style={{ margin: "0 0 12px" }}>
-          The password you type here is temporary — they'll be asked to choose their own the
-          first time they sign in.
-        </p>
-        <button
-          className={"btn btn-primary" + (creating ? " is-loading" : "")}
-          style={{ width: "fit-content" }}
-        >
-          Create account
-        </button>
-      </form>
+      </div>
 
-      <BulkImport onImported={load} />
+      {panel === "create" && (
+        <form onSubmit={create} className="card elev-sm panel-card" style={{ marginBottom: 20, maxWidth: 640 }}>
+          <div className="panel-card-head">
+            <div className="card-kicker">Create an account</div>
+            <button type="button" className="icon-btn" onClick={() => setPanel(null)} aria-label="Close">
+              <X />
+            </button>
+          </div>
+          <div className="form-grid">
+            <div className="field">
+              <label>Name</label>
+              <input className="input" value={draft.name} onChange={set("name")} />
+            </div>
+            <div className="field">
+              <label>Email</label>
+              <input className="input" type="email" value={draft.email} onChange={set("email")} />
+            </div>
+            <div className="field">
+              <label>Temp password</label>
+              <input className="input" value={draft.password} onChange={set("password")} />
+            </div>
+            <div className="field">
+              <label>Role</label>
+              <Select
+                aria-label="Role"
+                value={draft.role}
+                onChange={(v) => setDraft((d) => ({ ...d, role: v }))}
+                options={[
+                  { value: "student", label: "Student" },
+                  { value: "teacher", label: "Teacher" },
+                  { value: "admin", label: "Admin" },
+                ]}
+              />
+            </div>
+          </div>
+          <p className="muted-sm" style={{ margin: "0 0 12px" }}>
+            The password you type here is temporary — they'll be asked to choose their own the
+            first time they sign in.
+          </p>
+          <button
+            className={"btn btn-primary" + (creating ? " is-loading" : "")}
+            style={{ width: "fit-content" }}
+          >
+            Create account
+          </button>
+        </form>
+      )}
 
-      <div className="row" style={{ marginBottom: 12 }}>
-        <input
-          className="input"
-          style={{ maxWidth: 240 }}
-          placeholder="Search name or email"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <div style={{ maxWidth: 180, flex: "1 1 140px" }}>
+      {panel === "import" && <BulkImport onImported={load} onClose={() => setPanel(null)} />}
+
+      <div className="list-toolbar">
+        <label className="search-field">
+          <Search aria-hidden="true" />
+          <input
+            className="input"
+            type="search"
+            placeholder="Search name or email"
+            aria-label="Search users"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </label>
+        <div className="lt-filter">
           <Select
             aria-label="Filter by role"
             value={roleFilter}
@@ -299,7 +337,7 @@ export default function AdminUsers() {
       {status === "error" ? (
         <ErrorState title="Couldn't load users" message={error.message} onRetry={load} />
       ) : !users ? (
-        <CenterLoader />
+        <CenterLoader variant="rows" />
       ) : narrow ? (
         /* The 6-column table pushed the role picker and both action buttons
            off-screen on a phone, so each account becomes a card. */

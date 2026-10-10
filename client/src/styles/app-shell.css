@@ -330,9 +330,6 @@ a.plain { color: var(--color-text); text-decoration: none; }
   }
   .lesson-aside { position: static; margin-top: 24px; }
   .table { display: block; overflow-x: auto; }
-  .continue-card { flex-direction: column !important; align-items: stretch !important; }
-  .continue-card > div[style*="flex:1"] { flex: none !important; width: 100%; }
-  .continue-card .btn { width: 100%; }
   .topbar .input { flex: 1; max-width: none; }
   .flowbar { flex-wrap: wrap; }
 }

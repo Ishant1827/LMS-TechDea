@@ -1,0 +1,943 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   refresh.css — responsive design pass, loaded last.
+
+   What lives here, top to bottom:
+     TOKENS · FLUID TYPE · TOUCH · PAGE HEAD · CATALOG · COURSE THUMBS
+     PHONE TAB BAR · COURSE DETAILS CTA · LESSON PLAYER · DASHBOARD
+     SHEETS (modals on phones) · PHONE INPUTS
+
+   Breakpoints match the rest of the app: 900px is where the sidebar goes
+   off-canvas, 560px is a phone held upright.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════ TOKENS ══════════════════════════════════════════════════════════ */
+:root {
+  --tabbar-h: 62px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --topbar-h: 63px;
+}
+
+/* 100vh on mobile browsers includes the space under the URL bar, so a
+   full-height panel's bottom edge was hidden. dvh tracks what's visible. */
+.app { min-height: 100dvh; }
+.sidebar { height: 100dvh; }
+.loader-screen--boot { min-height: 100dvh; }
+.learn-shell { min-height: 100dvh; }
+
+/* The page entrance animates transform with fill-mode "both", which leaves a
+   transform applied forever — and a transformed ancestor traps every
+   position:fixed child (the sticky CTA bar landed mid-page). "backwards"
+   still covers the start, then lets go once it finishes. */
+.body { animation-fill-mode: backwards; }
+
+/* On a wide monitor the 1180px column hugged the sidebar and left a band of
+   empty space on the right; centre it in the space beside the sidebar. */
+.body { margin-inline: auto; }
+
+/* ══════════ FLUID TYPE ══════════════════════════════════════════════════════
+   Headings scale with the viewport between a phone floor and the desktop
+   sizes design-system.css set, instead of jumping at one breakpoint. */
+h1 { font-size: clamp(28px, 1.6vw + 20px, 38px); }
+h2 { font-size: clamp(24px, 1vw + 18px, 30px); letter-spacing: -0.8px; }
+h3 { font-size: clamp(19px, 0.5vw + 16px, 22px); }
+
+/* ══════════ TOUCH ═══════════════════════════════════════════════════════════
+   Hover lifts stick after a tap on touch screens (the card stays raised until
+   you tap elsewhere). Keep them for real pointers only; give touch a press. */
+a, button { -webkit-tap-highlight-color: transparent; }
+@media (hover: none) {
+  .clickable:hover { transform: none; box-shadow: none; border-color: var(--color-divider); }
+  .btn-primary:hover:not(:disabled) { transform: none; background: var(--color-accent); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--color-divider); color: var(--color-text); }
+}
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.clickable:active { transform: scale(0.99); }
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled), .clickable:active { transform: none; }
+}
+
+/* ══════════ PAGE HEAD ═══════════════════════════════════════════════════════ */
+.page-head {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+  margin-bottom: 18px;
+}
+.page-head h2 { margin: 0; }
+.page-count {
+  font-size: 12px; font-weight: 700; color: var(--color-neutral-700);
+  background: var(--color-neutral-100); border: 1px solid var(--color-neutral-200);
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════ BACK LINK ═══════════════════════════════════════════════════════
+   "← Back to courses" above a detail page's title. On desktop a quiet pill
+   that tints on hover, pulled left so its arrow lines up with the title.
+   Hidden in the phone/tablet layout: the browser's and phone's own back
+   gesture does this, and the tab bar covers the rest. */
+.page-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: -4px 0 14px -10px; padding: 6px 12px 6px 10px;
+  border: 0; border-radius: var(--radius-pill); background: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 650; line-height: 1.2;
+  color: var(--color-muted); text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.page-back svg { width: 16px; height: 16px; flex: none; transition: transform 0.15s ease; }
+.page-back:hover { background: var(--color-neutral-100); color: var(--color-text); }
+.page-back:hover svg { transform: translateX(-2px); }
+.page-back:focus-visible { outline-offset: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .page-back, .page-back svg { transition: none; }
+}
+@media (max-width: 900px) {
+  .page-back { display: none; }
+}
+
+/* ══════════ CATALOG ═════════════════════════════════════════════════════════ */
+.search-field { position: relative; display: block; min-width: 0; }
+.search-field svg {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--color-neutral-500); pointer-events: none;
+}
+.search-field .input { padding-left: 38px; }
+.search-field .input::-webkit-search-cancel-button { cursor: pointer; }
+
+.filter-bar { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.filter-selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) {
+  .filter-bar { grid-template-columns: 1fr; }
+}
+/* Three selects stacked cost a phone screen of scrolling before the first
+   course. Side by side they fit; long labels ellipsize. */
+@media (max-width: 560px) {
+  .filter-bar { gap: 8px; margin-bottom: 16px; }
+  .filter-selects { gap: 6px; }
+  .filter-selects .sel-trigger { padding-left: 10px; padding-right: 6px; font-size: 13px; gap: 4px; }
+}
+
+/* Fills the row with as many ≥250px cards as fit: 3 on a laptop, 2 on a
+   tablet, 1 on a phone — rather than jumping straight from 3 to 1. */
+.course-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.course-card { padding: 12px 12px 14px; }
+.course-card > .btn-block:last-child { margin-top: auto; }
+.course-card .card-title { line-height: 1.3; }
+@media (max-width: 560px) {
+  .course-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* My Learning and friends: two across on a tablet instead of one */
+@media (min-width: 600px) and (max-width: 900px) {
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ══════════ COURSE THUMBS ═══════════════════════════════════════════════════ */
+.course-thumb { height: auto; width: 100%; }
+.ph.course-thumb { display: flex; }
+.card > .course-thumb,
+.card > a > .course-thumb { border-radius: 12px; }
+
+/* ══════════ PHONE TAB BAR ═══════════════════════════════════════════════════
+   Below 900px the sidebar is a drawer; the four most-used destinations sit in
+   a bottom bar within thumb reach, and "More" opens the drawer for the rest. */
+.tabbar { display: none; }
+
+@media (max-width: 900px) {
+  .tabbar {
+    display: flex; gap: 2px;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    height: calc(var(--tabbar-h) + var(--safe-b));
+    padding: 6px 6px calc(6px + var(--safe-b));
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border-top: 1px solid var(--color-divider);
+    box-shadow: 0 -6px 24px rgba(40, 20, 80, 0.06);
+  }
+  .tabbar .tab {
+    position: relative; isolation: isolate;
+    flex: 1 1 0; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: 0; border-radius: 12px; cursor: pointer;
+    font: inherit; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1px;
+    color: var(--color-neutral-500); text-decoration: none;
+  }
+  .tabbar .tab svg { width: 21px; height: 21px; flex: none; transition: transform 0.18s ease; }
+  .tabbar .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabbar .tab.on { color: var(--color-accent); }
+  /* the active pill behind the icon */
+  .tabbar .tab::before {
+    content: ""; position: absolute; z-index: -1;
+    left: 50%; top: 3px; width: 50px; height: 30px; margin-left: -25px;
+    border-radius: var(--radius-pill); background: var(--color-accent-100);
+    transform: scaleX(0.4); opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .tabbar .tab.on::before { transform: none; opacity: 1; }
+  .tabbar .tab:focus-visible { outline-offset: -2px; }
+  /* tablets: five tabs stretched across 768px read as scattered */
+  .tabbar { justify-content: center; }
+  .tabbar .tab { max-width: 112px; }
+
+  /* keep content and the toast clear of the bar */
+  .app:has(> .tabbar) .main { padding-bottom: calc(var(--tabbar-h) + var(--safe-b)); }
+  /* the toast is rendered outside .app (ToastContext), so key off the page */
+  body:has(.tabbar) .toast { bottom: calc(var(--tabbar-h) + var(--safe-b) + 14px); }
+
+  /* a slimmer top bar — the tab bar carries navigation now */
+  .topbar { padding-top: 10px; padding-bottom: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabbar .tab svg, .tabbar .tab::before { transition: none; }
+}
+
+/* toasts on a phone: full width, above the bar, easier to read */
+@media (max-width: 560px) {
+  .toast {
+    left: 16px; right: 16px; transform: none; text-align: center;
+    bottom: calc(16px + var(--safe-b));
+  }
+}
+
+/* ══════════ COURSE DETAILS CTA ══════════════════════════════════════════════ */
+/* sticks below the sticky top bar, not underneath it */
+.enrol-box { height: fit-content; position: sticky; top: calc(var(--topbar-h) + 16px); }
+
+.cta-bar { display: none; }
+@media (max-width: 900px) {
+  .enrol-box { position: static; }
+  .cta-bar {
+    display: flex; align-items: center; gap: 12px;
+    position: fixed; left: 0; right: 0; z-index: 29;
+    bottom: calc(var(--tabbar-h) + var(--safe-b));
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--color-divider);
+  }
+  .cta-bar-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+  .cta-bar-text strong { font-family: var(--font-heading); font-size: 18px; font-weight: 800; }
+  .cta-bar-text span {
+    font-size: 12px; color: var(--color-muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cta-bar .btn { flex: none; min-height: 44px; padding-inline: 20px; }
+  .body.has-cta-bar { padding-bottom: 92px; }
+}
+
+/* ══════════ LESSON PLAYER ═══════════════════════════════════════════════════ */
+.flow-meta { font-size: 13px; }
+.flow-meta-short { display: none; }
+
+/* desktop: the curriculum column fills the height under the bar instead of
+   ending in a short white box halfway down the page */
+.curriculum { height: calc(100dvh - 57px); }
+
+.curriculum-progress {
+  margin: 0 0 6px; padding: 10px 11px 12px;
+  background: var(--color-soft); border: 1px solid var(--color-neutral-200);
+  border-radius: 12px;
+}
+.cp-line {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11.5px; font-weight: 700; color: var(--color-muted); margin-bottom: 7px;
+}
+.cp-line strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.curriculum-progress .pbar { height: 6px; }
+
+@media (max-width: 900px) {
+  .curriculum { height: 100%; }
+  /* one row: menu · logo · course title · 1/5 · close */
+  .flowbar { flex-wrap: nowrap; gap: 10px; padding: 10px 12px; min-height: 56px; }
+  .flowbar .brand-word { display: none; }
+  .flowbar .brand + * { border-left: 0; padding-left: 0; }
+  .flowbar .title { flex: 1; }
+  .flowbar .icon-btn, .flowbar .back { min-width: 40px; min-height: 40px; justify-content: center; }
+  .flow-meta-full { display: none; }
+  .flow-meta-short {
+    display: inline-block; font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums;
+    color: var(--color-neutral-700); background: var(--color-neutral-100);
+    padding: 3px 9px; border-radius: var(--radius-pill);
+  }
+
+  /* Prev / Complete / Next on one row that rides the bottom of the screen
+     while you read, so finishing a lesson never needs a scroll to find it. */
+  .lesson-nav {
+    position: sticky; bottom: 0; z-index: 6;
+    flex-wrap: nowrap; gap: 8px;
+    margin: 16px -20px 0; padding: 10px 20px calc(10px + var(--safe-b));
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .lesson-nav .btn { min-height: 46px; }
+  .lesson-nav .btn-primary { flex: 1; }
+  .lesson-nav .btn-secondary { flex: none; }
+}
+@media (max-width: 560px) {
+  .lesson-body { padding: 18px 16px 0; }
+  .lesson-nav { margin-inline: -16px; padding-inline: 16px; }
+  .lesson-nav .nav-label { display: none; }
+  .lesson-nav .btn-secondary { width: 46px; padding: 0; }
+  .lesson-aside { padding-bottom: 28px; }
+  .video-embed { border-radius: 14px; margin-inline: -4px; width: calc(100% + 8px); }
+}
+
+/* ══════════ STAFF PAGES ═════════════════════════════════════════════════════ */
+
+/* page header with a title and one or two actions */
+.head-with-actions {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  margin-bottom: 18px;
+}
+.head-with-actions h2 { margin: 0; }
+.head-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-secondary.is-active { border-color: var(--color-accent-300); color: var(--color-accent); background: var(--color-accent-100); }
+
+/* a form opened from a header button: kicker on the left, close on the right */
+.panel-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.panel-card-head .icon-btn { margin: -6px -6px -6px 0; }
+.panel-card-head .icon-btn svg { width: 18px; height: 18px; }
+.panel-card { animation: td-rise 0.18s ease backwards; }
+@media (prefers-reduced-motion: reduce) { .panel-card { animation: none; } }
+
+/* search + filter + optional action above a list (Students, Users) */
+.list-toolbar {
+  display: grid; gap: 10px; align-items: center; margin-bottom: 12px;
+  grid-template-columns: minmax(0, 260px) minmax(0, 190px) 1fr;
+}
+.list-toolbar .lt-action { justify-self: end; }
+
+/* Assignments: course picker with the create buttons beside it */
+.asmt-toolbar .asmt-actions { margin-left: auto; display: flex; gap: 8px; align-self: flex-end; }
+
+/* Performance: title + course picker */
+.head-picker { width: 100%; max-width: 260px; margin-left: auto; }
+
+.stat-strip--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (max-width: 700px) {
+  .head-actions { margin-left: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .head-actions .btn { min-height: 44px; }
+
+  .list-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .list-toolbar .search-field { grid-column: 1 / -1; }
+  .list-toolbar .lt-filter:last-child { grid-column: 1 / -1; }
+  .list-toolbar .lt-action { min-height: 42px; }
+
+  .asmt-toolbar { flex-direction: column; align-items: stretch; }
+  .asmt-toolbar .course-select { min-width: 0; max-width: none; }
+  .asmt-toolbar .asmt-actions { margin-left: 0; align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
+  .asmt-toolbar .asmt-actions .btn { min-height: 44px; }
+
+  .head-picker { max-width: none; margin-left: 0; }
+
+}
+
+@media (max-width: 560px) {
+  .stat-strip--3 { gap: 8px; }
+  .stat-strip--3 .stat { padding: 12px; }
+
+  .body { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ══════════ COURSE EDITOR ═══════════════════════════════════════════════════ */
+/* header: status + course title + one line on what publishing means, with
+   Preview and the single Publish / Unpublish button on the right */
+.editor-head {
+  display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px 20px;
+  margin-bottom: 22px;
+}
+.editor-head-text { flex: 1 1 320px; min-width: 0; }
+.editor-head-text .tag { margin-bottom: 8px; }
+.editor-head h2 { margin: 0; overflow-wrap: anywhere; }
+.editor-head-sub { margin: 4px 0 0; font-size: 13px; color: var(--color-muted); }
+.editor-head-actions { display: flex; gap: 8px; flex: none; }
+
+/* status strip under the header: counts, plus the publish checklist on drafts */
+.status-bar {
+  flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px;
+  padding: 12px 16px; margin-bottom: 22px;
+}
+.sb-stats { display: flex; flex-wrap: wrap; gap: 6px 20px; flex: 1 1 420px; min-width: 0; }
+.sb-stat { display: inline-flex; align-items: baseline; gap: 5px; font-size: 12.5px; color: var(--color-muted); white-space: nowrap; }
+.sb-stat svg { width: 14px; height: 14px; align-self: center; color: var(--color-accent); flex: none; }
+.sb-stat b { font-family: var(--font-heading); font-size: 15px; font-weight: 800; color: var(--color-text); font-variant-numeric: tabular-nums; }
+
+.sb-checks { flex: 0 1 auto; min-width: 0; padding-left: 20px; border-left: 1px solid var(--color-divider); }
+.sb-checks-h { display: block; font-size: 10.5px; font-weight: 850; letter-spacing: 0.8px; text-transform: uppercase; color: var(--color-accent); margin-bottom: 4px; }
+.sb-checks ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.sb-checks li { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 650; color: var(--color-text); }
+.sb-checks li svg { width: 15px; height: 15px; flex: none; color: var(--color-neutral-400); }
+.sb-checks li small { font-size: 11px; font-weight: 600; color: var(--color-muted); }
+.sb-checks li.is-done { color: var(--color-muted); font-weight: 600; }
+.sb-checks li.is-done svg { color: var(--color-success); }
+.sb-checks li.is-required svg, .sb-checks li.is-required small { color: var(--color-warn); }
+
+@media (max-width: 700px) {
+  .status-bar { padding: 12px 14px; gap: 12px; }
+  /* counts as a tidy 3-up grid instead of a ragged wrap */
+  .sb-stats { flex-basis: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
+  /* icon + number on one line, the label under it */
+  .sb-stat { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 4px; white-space: normal; }
+  .sb-stat span { grid-column: 1 / -1; font-size: 11px; line-height: 1.25; }
+  .sb-stat b { font-size: 14px; }
+  .sb-stat svg { width: 13px; height: 13px; }
+  .sb-checks { flex-basis: 100%; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--color-divider); }
+  .sb-checks ul { flex-direction: column; gap: 6px; }
+}
+
+/* "1 Course details" / "2 Curriculum" — the order to fill the page in */
+.step-label {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-heading); font-size: 16px; font-weight: 800; letter-spacing: -0.2px;
+  color: var(--color-text); margin: 0 0 6px;
+}
+.step-num {
+  width: 24px; height: 24px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-accent); color: #fff;
+  font-size: 12px; font-weight: 800; letter-spacing: 0;
+}
+
+/* curriculum header */
+.lm-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 10px; }
+.lm-head h4 { margin: 0; }
+.lm-head .lm-add { margin-left: auto; }
+.lm-hint {
+  display: flex; align-items: center; gap: 6px; margin: 0 0 10px;
+  font-size: 12px; color: var(--color-muted);
+}
+.lm-hint svg { width: 14px; height: 14px; flex: none; }
+.lm-empty { margin-bottom: 12px; }
+
+/* module card */
+.lm-module { padding: 10px 10px 8px; transition: border-color 0.15s, background 0.15s; }
+.lm-module.is-drop-end { border-color: var(--color-accent-400); background: var(--color-soft); }
+.lm-mod-head { gap: 8px; margin: 0 0 6px; padding: 2px 2px 8px 4px; border-bottom: 1px solid var(--color-neutral-100); }
+.lm-mod-num {
+  width: 22px; height: 22px; flex: none; border-radius: 7px;
+  display: grid; place-items: center;
+  background: var(--color-accent-100); color: var(--color-accent-700);
+  font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.lm-mod-name {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0;
+  padding: 3px 6px; margin-left: -6px; border: 0; border-radius: 7px; background: none; cursor: text;
+  font: inherit; color: var(--color-text); text-align: left;
+}
+.lm-mod-name svg { width: 13px; height: 13px; color: var(--color-neutral-400); flex: none; opacity: 0; transition: opacity 0.15s; }
+.lm-mod-name:hover { background: var(--color-neutral-100); }
+.lm-mod-name:hover svg, .lm-mod-name:focus-visible svg { opacity: 1; }
+.lm-rename { min-height: 32px; padding: 4px 8px; font-weight: 700; max-width: 260px; }
+.lm-mod-tools { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
+.lm-mod-add { padding: 4px 8px; }
+
+/* lesson rows */
+.lm-list { display: flex; flex-direction: column; }
+.lm-row { position: relative; gap: 8px; padding: 7px 6px; }
+.lm-row + .lm-row { border-top: 1px solid var(--color-neutral-100); }
+.lm-row[draggable="true"] { cursor: grab; }
+.lm-row.is-dragging { opacity: 0.4; }
+/* insertion line where the dragged lesson would land */
+.lm-row.is-drop-before::before {
+  content: ""; position: absolute; left: 6px; right: 6px; top: -2px; height: 3px;
+  border-radius: 3px; background: var(--color-accent);
+}
+.lm-grip { flex: none; display: grid; place-items: center; width: 16px; color: var(--color-neutral-400); }
+.lm-grip svg { width: 15px; height: 15px; }
+.lm-row:hover .lm-grip { color: var(--color-neutral-600); }
+.lm-main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;
+  background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.lm-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13.5px; font-weight: 700; line-height: 1.35; }
+.lm-main:hover .lm-title { color: var(--color-accent); }
+.lm-hidden { font-size: 10px; padding: 2px 7px; gap: 3px; }
+.lm-hidden svg { width: 11px; height: 11px; }
+.lm-actions { flex: none; display: inline-flex; align-items: center; gap: 2px; }
+
+.lm-icon {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border: 0; border-radius: 9px; background: none; cursor: pointer; color: var(--color-neutral-600);
+  transition: background 0.12s, color 0.12s;
+}
+.lm-icon svg { width: 16px; height: 16px; }
+.lm-icon:hover:not(:disabled) { background: var(--color-neutral-100); color: var(--color-accent); }
+.lm-icon.is-danger:hover:not(:disabled) { background: #fdf0f0; color: var(--color-danger); }
+.lm-icon:disabled { opacity: 0.3; cursor: default; }
+
+.lm-new-module {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 12px; margin-top: 4px;
+  border: 1.5px dashed var(--color-neutral-300); border-radius: var(--radius-lg);
+  background: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; color: var(--color-muted);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.lm-new-module svg { width: 16px; height: 16px; }
+.lm-new-module:hover { border-color: var(--color-accent-300); color: var(--color-accent); background: var(--color-soft); }
+
+/* lesson form (in a dialog) */
+.lm-visible { align-items: flex-start; margin-top: 6px; font-size: 13.5px; font-weight: 650; }
+.lm-visible .dot { margin-top: 1px; border-radius: 6px; }
+.lm-visible small { display: block; font-size: 12px; font-weight: 500; color: var(--color-muted); margin-top: 1px; }
+.lm-form-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-divider);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-module, .lm-icon, .lm-new-module, .lm-mod-name svg { transition: none; }
+}
+
+@media (max-width: 700px) {
+  .editor-head-actions { width: 100%; display: grid; grid-template-columns: 1fr 1.4fr; }
+  .editor-head-actions .btn { min-height: 44px; }
+  .editor-head-actions .btn:only-child { grid-column: 1 / -1; }
+
+  /* no dragging on touch — the arrows do it — so drop the grip; actions get a row of their own */
+  .lm-grip, .lm-hint { display: none; }
+  .lm-row { flex-wrap: wrap; padding: 10px 4px; }
+  .lm-actions { width: 100%; justify-content: flex-end; gap: 4px; padding-left: 34px; }
+  .lm-icon { width: 40px; height: 40px; background: var(--color-neutral-100); }
+  .lm-icon.is-danger { color: var(--color-danger); }
+  /* module title row stays one line: the name truncates, the lesson count goes */
+  .lm-mod-head { flex-wrap: nowrap; }
+  .lm-mod-head .count { display: none; }
+  .lm-mod-name { flex: 1 1 auto; overflow: hidden; }
+  .lm-mod-name { white-space: nowrap; text-overflow: ellipsis; display: block; }
+  .lm-mod-name svg { display: none; }
+  .lm-mod-tools .lm-icon { width: 36px; height: 36px; }
+  .lm-head .lm-add { width: 100%; min-height: 44px; margin-left: 0; }
+  .lm-form-actions { display: grid; grid-template-columns: 1fr 1.4fr; }
+  .lm-form-actions .btn { min-height: 46px; }
+}
+
+/* ══════════ SHEETS ══════════════════════════════════════════════════════════
+   On a phone a centred dialog floats awkwardly with its buttons far from the
+   thumb. Rise from the bottom edge as a sheet instead. */
+@keyframes td-sheet-up { from { transform: translateY(24px); opacity: 0; } }
+@media (max-width: 560px) {
+  .modal-backdrop { padding: 12px 0 0; }
+  .modal {
+    width: 100%; margin: auto 0 0;
+    border-radius: 22px 22px 0 0;
+    padding: 10px 18px calc(20px + var(--safe-b));
+    animation: td-sheet-up 0.22s ease-out both;
+  }
+  /* grab handle */
+  .modal::before {
+    content: ""; display: block; flex: none;
+    width: 40px; height: 4px; margin: 0 auto 10px;
+    border-radius: var(--radius-pill); background: var(--color-neutral-300);
+  }
+}
+@media (max-width: 560px) and (prefers-reduced-motion: reduce) {
+  .modal { animation: none; }
+}
+
+/* ══════════ PHONE INPUTS ════════════════════════════════════════════════════
+   iOS zooms the whole page into any focused field under 16px and doesn't
+   zoom back out. 16px on touch devices stops that. */
+@media (pointer: coarse) {
+  .input, textarea.input, select.input { font-size: 16px; }
+}
+
+/* ══════════ ACCESSIBILITY HELPER ════════════════════════════════════════════ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ══════════ SKELETONS ═══════════════════════════════════════════════════════
+   Grey stand-ins shaped like the page that's loading (Loaders.jsx). The
+   shimmer itself is .skeleton in app-shell.css; this is only layout. */
+.sk-page { animation: td-rise 0.2s ease both; }
+.sk-head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+.sk-tile { gap: 10px; }
+.sk-hero { flex-direction: row; align-items: center; gap: 16px; margin-bottom: 20px; }
+.sk-rows { padding: 6px 12px; gap: 0; }
+.sk-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.sk-row + .sk-row { border-top: 1px solid var(--color-neutral-100); }
+.sk-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.sk-curriculum { gap: 4px; }
+@media (max-width: 700px) {
+  .sk-hero { flex-direction: column; align-items: stretch; }
+  .sk-hero > .skeleton { width: 100% !important; }
+  .sk-head > .skeleton { display: none !important; }
+}
+
+/* course covers: shimmer (.skeleton) until the image arrives, then fade in.
+   .skeleton sets color:transparent and pointer-events:none for text stand-ins;
+   an image wants neither once it's clickable, so undo those here. */
+@keyframes thumb-in { from { opacity: 0; } }
+img.course-thumb.is-pending { pointer-events: auto; border-radius: 14px; }
+img.course-thumb.is-fading-in { animation: thumb-in 0.4s ease both; }
+@media (prefers-reduced-motion: reduce) { img.course-thumb.is-fading-in { animation: none; } }
+
+/* ══════════ WELCOME SCREEN ══════════════════════════════════════════════════
+   The curtain after sign-in (WelcomeScreen.jsx). Sits above everything; the
+   dashboard renders underneath and is revealed when it slides up. */
+@keyframes ws-logo-in { from { opacity: 0; transform: scale(0.6) rotate(-8deg); } }
+@keyframes ws-rise { from { opacity: 0; transform: translateY(12px); } }
+@keyframes ws-fill { from { transform: scaleX(0); } }
+@keyframes ws-up { to { transform: translateY(-100%); border-radius: 0 0 40% 40%; } }
+@keyframes ws-fade { to { opacity: 0; } }
+
+.welcome-screen {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center; align-content: center; gap: 16px;
+  padding: 24px; text-align: center; color: #fff; cursor: pointer;
+  background: radial-gradient(120% 80% at 50% 0%, #5b21b6 0%, #2a0a56 55%, #171126 100%);
+  -webkit-tap-highlight-color: transparent;
+}
+.welcome-screen.is-leaving { animation: ws-up 0.65s cubic-bezier(0.7, 0, 0.2, 1) forwards; pointer-events: none; }
+.ws-logo {
+  width: clamp(88px, 12vw, 120px); height: auto;
+  filter: drop-shadow(0 10px 30px rgba(139, 92, 246, 0.55));
+  animation: ws-logo-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.ws-hi { font-size: 15px; font-weight: 600; color: #d3bff5; animation: ws-rise 0.5s 0.35s ease-out both; }
+.ws-name {
+  font-family: var(--font-heading); font-size: clamp(32px, 4vw, 46px); font-weight: 900;
+  letter-spacing: -1px; line-height: 1.1; animation: ws-rise 0.5s 0.5s ease-out both;
+}
+.ws-line { font-size: 14px; color: #b794f0; animation: ws-rise 0.5s 0.65s ease-out both; }
+.ws-bar {
+  width: 120px; height: 3px; border-radius: 3px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.15); animation: ws-rise 0.4s 0.7s ease-out both;
+}
+.ws-bar i {
+  display: block; width: 100%; height: 100%; background: #b794f0;
+  transform-origin: left; animation: ws-fill var(--hold, 2s) 0.6s linear both;
+}
+.ws-skip {
+  position: absolute; left: 0; right: 0; bottom: calc(22px + var(--safe-b));
+  font-size: 12px; color: rgba(255, 255, 255, 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-logo, .ws-hi, .ws-name, .ws-line, .ws-bar, .ws-bar i { animation: none; }
+  .welcome-screen.is-leaving { animation: ws-fade 0.3s ease forwards; }
+}
+
+/* ══════════ MOTIONS ═════════════════════════════════════════════════════════
+   Small, quick feedback. Everything here is off under prefers-reduced-motion
+   (block at the end). Shared keyframes first. */
+@keyframes td-pop { 0% { transform: scale(0.88); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes td-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* 1 · lesson completed — the button goes green with a pop, the bars fill */
+.lesson-nav .btn-primary.is-done { background: var(--color-success); box-shadow: 0 8px 20px rgba(19, 138, 91, 0.22); }
+.lesson-nav .btn-primary.is-done:hover:not(:disabled) { background: #0f7a50; }
+.lesson-nav .btn-primary.just-done { animation: td-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.lesson-nav .btn-primary.just-done .done-tick { animation: td-pop 0.45s 0.08s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.pfill { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* 2 · course finished — confetti (burstConfetti in Motion.jsx) */
+@keyframes td-burst {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 90px)) rotate(var(--r)); }
+}
+.confetti-layer { position: fixed; inset: 0; z-index: 120; pointer-events: none; overflow: hidden; }
+.confetti-layer i {
+  position: absolute; left: 50%; top: 42%; width: 8px; height: 12px; border-radius: 2px;
+  opacity: 0; animation: td-burst 1.35s cubic-bezier(0.1, 0.7, 0.3, 1) forwards;
+}
+
+/* 5 · cards arrive in a quick wave rather than all at once */
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > *,
+.lm-module {
+  animation: td-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > :nth-child(2), .lm-module:nth-child(3) { animation-delay: 50ms; }
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > :nth-child(3), .lm-module:nth-child(4) { animation-delay: 100ms; }
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > :nth-child(4), .lm-module:nth-child(5) { animation-delay: 150ms; }
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > :nth-child(5) { animation-delay: 200ms; }
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > :nth-child(6) { animation-delay: 250ms; }
+:is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > :nth-child(n + 7) { animation-delay: 300ms; }
+
+/* 6 · button press — a ripple from the finger (ripple.js); the press-shrink is under TOUCH */
+.btn-primary, .btn-secondary, .btn-danger { position: relative; overflow: hidden; }
+@keyframes td-ripple { to { transform: scale(4); opacity: 0; } }
+.btn-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: currentColor; opacity: 0.22; transform: scale(0);
+  animation: td-ripple 0.55s ease-out forwards;
+}
+.btn-primary .btn-ripple, .btn-danger .btn-ripple { background: #fff; opacity: 0.35; }
+
+/* 7 · page change — each page's body already rises in (td-rise in
+   app-shell.css); a touch longer and softer than before */
+.body { animation-duration: 0.28s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* 8 · toasts spring up from the bottom. `translate` is separate from
+   `transform`, so it composes with the centring translateX(-50%). */
+@keyframes td-toast-in { from { opacity: 0; translate: 0 22px; scale: 0.96; } }
+.toast { animation: td-toast-in 0.35s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+
+/* 9 · drag — the row lifts as you grab it, so the drag image the browser
+   takes carries the shadow too */
+.lm-row[draggable="true"]:active {
+  background: #fff; border-radius: 10px; box-shadow: 0 12px 28px rgba(40, 20, 80, 0.2);
+}
+.lm-row.is-dragging { opacity: 0.35; box-shadow: none; background: var(--color-soft); outline: 1.5px dashed var(--color-accent-300); outline-offset: -2px; }
+
+/* 10 · empty pages — a small floating illustration (EmptyState in Motion.jsx) */
+@keyframes td-float { 50% { transform: translateY(-7px) rotate(-3deg); } }
+@keyframes td-twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+  padding: 34px 20px 30px; border: 1.5px dashed var(--color-neutral-300); border-radius: var(--radius-lg);
+  background: #fff;
+}
+.empty-state.is-compact { padding: 22px 16px; }
+.es-art { position: relative; width: 96px; height: 80px; margin-bottom: 8px; }
+.is-compact .es-art { transform: scale(0.75); margin: -8px 0 0; }
+.es-book {
+  position: absolute; left: 50%; top: 50%; width: 56px; height: 44px; margin: -22px 0 0 -28px;
+  border-radius: 6px 11px 11px 6px; background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  box-shadow: 0 10px 18px rgba(109, 40, 217, 0.25); animation: td-float 2.6s ease-in-out infinite;
+}
+.es-book::after {
+  content: ""; position: absolute; left: 9px; right: 11px; top: 10px; height: 4px; border-radius: 3px;
+  background: rgba(255, 255, 255, 0.55); box-shadow: 0 9px 0 rgba(255, 255, 255, 0.35);
+}
+.es-spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent-300); animation: td-twinkle 2s ease-in-out infinite; }
+.es-spark:nth-of-type(1) { left: 4px; top: 16px; }
+.es-spark:nth-of-type(2) { right: 4px; top: 6px; animation-delay: 0.6s; }
+.es-spark:nth-of-type(3) { right: 16px; bottom: 4px; width: 6px; height: 6px; animation-delay: 1.2s; }
+.es-title { font-family: var(--font-heading); font-size: 16px; font-weight: 800; }
+.es-text { font-size: 13px; color: var(--color-muted); max-width: 420px; }
+.es-action { margin-top: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-nav .btn-primary.just-done, .lesson-nav .btn-primary.just-done .done-tick,
+  .confetti-layer i, .lm-module, .toast, .es-book, .es-spark, .btn-ripple,
+  :is(.course-grid, .ring-courses, .rec-strip, .mcard-list, .stat-strip, .asmt-list, .grid-3) > * { animation: none; }
+  .pfill { transition: none; }
+}
+
+/* ══════════ DASHBOARDS ══════════════════════════════════════════════════════
+   Student + teacher dashboards. Every section is a direct child of .dash and
+   is placed by grid area, so each width gets its own priority order:
+     phone   — one column, most urgent first
+     ≥700px  — two columns
+     ≥1100px — wide main column + side column */
+.dash { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+.dash--student { grid-template-areas: "head" "hero" "due" "doubts" "stats" "courses" "rec"; }
+.dash--teacher { grid-template-areas: "head" "stats" "queue" "doubts" "perf" "activity"; }
+.a-head { grid-area: head; } .a-hero { grid-area: hero; } .a-due { grid-area: due; }
+.a-doubts { grid-area: doubts; } .a-stats { grid-area: stats; } .a-courses { grid-area: courses; }
+.a-rec { grid-area: rec; } .a-queue { grid-area: queue; } .a-perf { grid-area: perf; } .a-activity { grid-area: activity; }
+.dash > * { min-width: 0; }
+.dash .stat-strip { margin: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (min-width: 700px) {
+  .dash { gap: 20px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .dash--student { grid-template-areas: "head head" "hero hero" "due doubts" "stats stats" "courses courses" "rec rec"; }
+  .dash--teacher { grid-template-areas: "head head" "stats stats" "queue queue" "doubts activity" "perf perf"; }
+  .dash .stat-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .dash { gap: 22px; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); align-items: start; }
+  .dash--student { grid-template-areas: "head head" "hero due" "stats doubts" "courses doubts" "rec rec"; }
+  .dash--teacher { grid-template-areas: "head head" "stats stats" "queue doubts" "perf activity"; }
+  .dash--student .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* header */
+.dsh-head { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px 18px; }
+.dsh-head-text { flex: 1 1 280px; min-width: 0; }
+.dsh-date { display: block; font-size: 11.5px; font-weight: 850; letter-spacing: 1px; text-transform: uppercase; color: var(--color-accent); margin-bottom: 4px; }
+.dsh-head h2 { margin: 0; }
+.dsh-head .sub { color: var(--color-muted); font-size: 14px; margin: 4px 0 0; }
+.dsh-actions { display: flex; gap: 8px; }
+.today-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.today-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: var(--radius-pill);
+  background: #fff; border: 1px solid var(--color-divider); font-size: 12.5px; font-weight: 750;
+}
+.today-chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot, var(--color-accent-500)); }
+.today-chip.tone-danger { --dot: #e5484d; }
+.today-chip.tone-success { --dot: var(--color-success); }
+@media (max-width: 699px) {
+  .dsh-actions { width: 100%; display: grid; grid-template-columns: 1fr 1.3fr; }
+  .dsh-actions .btn { min-height: 44px; }
+}
+
+/* card header shared by every dashboard card */
+.dsh-card-h { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.dsh-card-h h4 { margin: 0; font-size: 16px; }
+.dsh-link { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--color-muted); text-decoration: none; white-space: nowrap; }
+.dsh-link:hover { color: var(--color-accent); }
+.dsh-link.is-static:hover { color: var(--color-muted); }
+.dsh-count { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: var(--radius-pill); color: #fff; background: var(--color-accent); }
+.dsh-count.tone-danger { background: #e5484d; }
+.dsh-quiet { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 2px; font-size: 13px; color: var(--color-muted); }
+.dsh-quiet svg { width: 17px; height: 17px; flex: none; color: var(--color-success); }
+
+/* up next — the dark card, the one thing to do now */
+.upnext {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 16px;
+  color: #fff; border: 0; text-decoration: none;
+  background: radial-gradient(120% 140% at 100% 0%, #7c3aed 0%, #4c1d95 45%, #1e1035 100%);
+  box-shadow: 0 18px 40px rgba(76, 29, 149, 0.28);
+}
+.upnext:hover { color: #fff; }
+.upnext-thumb { position: relative; display: block; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.upnext-thumb .course-thumb { border-radius: 14px; }
+.upnext-play {
+  position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+  display: grid; place-items: center; background: #fff; color: var(--color-accent);
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.25); transition: transform 0.2s ease;
+}
+.upnext-play svg { width: 20px; height: 20px; margin-left: 3px; fill: currentColor; }
+@media (hover: hover) { .upnext:hover .upnext-play { transform: scale(1.08); } }
+.upnext-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.upnext-kick { font-size: 11px; font-weight: 850; letter-spacing: 1.1px; color: #d3bff5; }
+.upnext h3 {
+  margin: 0; color: #fff; font-size: clamp(19px, 1.2vw + 14px, 24px); letter-spacing: -0.5px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.upnext-line { font-size: 13.5px; color: #d9ccf2; }
+.upnext-bar { display: block; margin-top: 8px; }
+.upnext-bar .pbar { background: rgba(255, 255, 255, 0.18); }
+.upnext-bar .pfill { background: #fff; }
+.upnext-meta { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #d9ccf2; }
+.upnext-btn { align-self: flex-start; margin-top: 8px; background: #fff; color: var(--color-accent); border: 0; }
+.upnext-btn svg { fill: currentColor; }
+.upnext.is-empty { flex-direction: row; align-items: center; }
+.upnext-icon { width: 64px; height: 64px; flex: none; border-radius: 18px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.14); }
+.upnext-icon svg { width: 30px; height: 30px; color: #fff; }
+@media (min-width: 700px) {
+  .upnext { flex-direction: row; align-items: center; padding: 18px; }
+  .upnext-thumb { width: 42%; flex: none; }
+}
+@media (max-width: 699px) { .upnext-btn { align-self: stretch; min-height: 46px; } }
+
+/* due soon — countdown timeline */
+.timeline { list-style: none; margin: 0; padding: 0 0 0 22px; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 6px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--color-neutral-200); }
+.tl-item { position: relative; --tl: var(--color-neutral-400); }
+.tl-item.tone-danger { --tl: #e5484d; }
+.tl-item.tone-warn { --tl: #f5a524; }
+.tl-item::before {
+  content: ""; position: absolute; left: -21px; top: 50%; margin-top: -6px; width: 12px; height: 12px;
+  border-radius: 50%; background: #fff; border: 3px solid var(--tl);
+}
+.tl-link { display: flex; align-items: center; gap: 12px; padding: 9px 8px; margin: 0 -8px; border-radius: 10px; color: var(--color-text); text-decoration: none; }
+.tl-link:hover { background: var(--color-soft); }
+.tl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tl-main b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-main span { font-size: 12px; color: var(--color-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-left { flex: none; text-align: right; display: flex; flex-direction: column; line-height: 1.15; }
+.tl-left b { font-family: var(--font-heading); font-size: 16px; font-weight: 900; color: var(--tl); }
+.tl-item.tone-neutral .tl-left b { color: var(--color-text); }
+.tl-left small { font-size: 10.5px; font-weight: 700; color: var(--color-muted); }
+
+/* doubts — conversation bubbles */
+.chat { display: flex; flex-direction: column; gap: 12px; }
+.thread {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px;
+  background: #fcfbfe; border: 1px solid var(--color-neutral-200); color: var(--color-text); text-decoration: none;
+}
+a.thread:hover { border-color: var(--color-accent-300); }
+.thread-q { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 12px; color: var(--color-muted); }
+.thread-q b { color: var(--color-text); font-size: 13px; }
+.thread-q .tag { margin-left: auto; font-size: 10px; padding: 2px 8px; }
+.bubble { display: flex; align-items: flex-end; gap: 8px; }
+.bubble .avatar { width: 28px; height: 28px; font-size: 10px; display: grid; place-items: center; color: #fff; font-weight: 800; flex: none; }
+.bubble-text {
+  min-width: 0; padding: 9px 12px; border-radius: 14px 14px 14px 4px; background: #fff;
+  border: 1px solid var(--color-divider); font-size: 13px; line-height: 1.45;
+}
+.bubble.is-new .bubble-text { background: #f6f1ff; border-color: var(--color-accent-300); }
+.bubble-text b { font-size: 12.5px; }
+.bubble-body { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.new-tag { font-size: 9.5px; font-weight: 850; color: #fff; background: var(--color-accent); border-radius: var(--radius-pill); padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+.thread-wait { align-self: flex-start; font-size: 12px; font-weight: 700; color: #9a5b00; background: #fdf1dc; border-radius: 10px; padding: 7px 10px; }
+.thread-btn { align-self: flex-start; min-height: 34px; padding: 6px 14px; font-size: 12.5px; }
+.chat-hint { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border: 1.5px dashed var(--color-divider); border-radius: 14px; font-size: 12.5px; color: var(--color-muted); }
+.chat-hint svg { width: 16px; height: 16px; flex: none; }
+
+/* my courses — rings */
+.ring-courses { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.ring-course { flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; }
+.ring-course .ring-wrap { flex: none; }
+.ring-course .ring-text { font-size: 12px; font-weight: 900; }
+.rc-text { min-width: 0; display: flex; flex-direction: column; }
+.rc-text b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc-text span { font-size: 12px; color: var(--color-muted); }
+
+/* recommended — swipe on a phone, a row of four wider */
+.rec-strip { display: grid; gap: 12px; grid-auto-flow: column; grid-auto-columns: 72%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+.rec-strip > * { scroll-snap-align: start; }
+@media (min-width: 700px) { .rec-strip { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; } }
+.rec-card { gap: 6px; padding: 10px; }
+.rec-card b { font-size: 14px; line-height: 1.3; }
+.rec-why { font-size: 11px; font-weight: 800; color: var(--color-accent); margin-top: 4px; }
+.rec-by { font-size: 12px; color: var(--color-muted); }
+
+/* teacher: needs you now */
+.queue { list-style: none; margin: 0; padding: 0; }
+.queue-item { display: flex; align-items: center; gap: 12px; padding: 12px 2px; }
+.queue-item + .queue-item { border-top: 1px solid var(--color-neutral-100); }
+.prio { flex: none; width: 64px; text-align: center; font-size: 10px; font-weight: 900; letter-spacing: 0.6px; padding: 4px 6px; border-radius: 7px; }
+.prio--high { background: #fdecec; color: #b42318; }
+.prio--medium { background: #fdf1dc; color: #9a5b00; }
+.prio--low { background: var(--color-neutral-100); color: var(--color-neutral-700); }
+.queue-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.queue-main b { font-size: 14px; }
+.queue-main span { font-size: 12px; color: var(--color-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-btn { flex: none; min-height: 34px; padding: 6px 14px; font-size: 12.5px; }
+@media (max-width: 699px) {
+  .queue-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .queue-item .prio { grid-column: 1 / -1; justify-self: start; width: auto; }
+  .queue-main span { white-space: normal; }
+  .queue-btn { min-height: 40px; }
+}
+
+/* teacher: course performance */
+.perf { list-style: none; margin: 0; padding: 0; }
+.perf li + li { border-top: 1px solid var(--color-neutral-100); }
+.perf-row {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; align-items: center; gap: 8px 16px;
+  padding: 11px 6px; margin: 0 -6px; border-radius: 10px; color: var(--color-text);
+}
+.perf-row:hover { background: var(--color-soft); }
+.perf-name { min-width: 0; display: flex; flex-direction: column; }
+.perf-name b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.perf-name span { font-size: 12px; color: var(--color-muted); }
+.perf-bar { display: flex; align-items: center; gap: 8px; }
+.perf-bar .pbar { flex: 1; }
+.perf-bar em { font-style: normal; font-size: 12px; font-weight: 800; min-width: 34px; text-align: right; color: var(--color-neutral-700); }
+.avatar-stack { display: flex; }
+.avatar-stack .avatar { width: 26px; height: 26px; font-size: 9.5px; display: grid; place-items: center; color: #fff; font-weight: 800; border: 2px solid #fff; margin-left: -7px; }
+.avatar-stack .avatar:first-child { margin-left: 0; }
+.avatar-stack .avatar-more { background: var(--color-neutral-200); color: var(--color-neutral-700); }
+@media (max-width: 699px) {
+  .perf-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .perf-bar { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* teacher: activity with presence dots */
+.activity { list-style: none; margin: 0; padding: 0; }
+.activity-item { display: flex; align-items: center; gap: 12px; padding: 10px 2px; }
+.activity-item + .activity-item { border-top: 1px solid var(--color-neutral-100); }
+.presence { position: relative; flex: none; }
+.presence .avatar { width: 34px; height: 34px; font-size: 11.5px; display: grid; place-items: center; color: #fff; font-weight: 800; }
+.presence::after {
+  content: ""; position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%;
+  border: 2px solid #fff; background: var(--color-neutral-400);
+}
+.presence--active::after, .presence--done::after { background: var(--color-success); }
+.presence--stalled::after { background: #e5484d; }
+.activity-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.activity-main b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity-main span { font-size: 12px; color: var(--color-muted); }
+.tag-success { background: #e2f3ec; color: #0f6e48; }
+.tag-danger { background: #fdecec; color: #b42318; }
+
+@media (prefers-reduced-motion: reduce) { .upnext-play { transition: none; } }

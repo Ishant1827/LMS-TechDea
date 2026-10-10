@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import api from "@/shared/api/client";
 import { useLoad } from "@/shared/hooks/useLoad";
-import { BootLoader } from "@/shared/components/ui";
+import { Bar, LessonSkeleton, burstConfetti } from "@/shared/components/ui";
 import Brand from "@/shared/components/layout/Brand";
 import LessonContent from "@/shared/components/lesson/LessonContent";
 import Modal from "@/shared/components/ui/Modal";
@@ -42,6 +42,8 @@ export default function LessonPlayer() {
   const visited = useRef(new Set());
   // curriculum drawer — only reachable below 900px, where the sidebar is off-canvas
   const [navOpen, setNavOpen] = useState(false);
+  // the lesson just marked done — its button pops green before we move on
+  const [justDone, setJustDone] = useState(null);
 
   // notes
   const notesRef = useRef({}); // server-confirmed { lessonId: text }
@@ -208,7 +210,7 @@ export default function LessonPlayer() {
         </Link>
       </Centered>
     );
-  if (!state) return <BootLoader label="Opening lesson…" />;
+  if (!state) return <LessonSkeleton />;
 
   const { course, lessons, doneSet } = state;
 
@@ -228,6 +230,7 @@ export default function LessonPlayer() {
   const lesson = lessons[idx];
   const isDone = doneSet.has(String(lesson._id));
   const courseComplete = doneSet.size >= lessons.length;
+  const pct = lessons.length ? Math.round((Math.min(doneSet.size, lessons.length) / lessons.length) * 100) : 0;
   const meta = typeMeta(lesson.type);
 
   const modules = [];
@@ -257,7 +260,10 @@ export default function LessonPlayer() {
       const { data } = await api.post(`/enrollments/${courseId}/complete`, { lessonId: lesson._id });
       setState((s) => ({ ...s, doneSet: new Set((data.completedLessonIds || []).map(String)) }));
       toast(data.justCompletedCourse ? "Course complete! 🎉" : "Lesson complete");
-      if (lessons[idx + 1]) go(idx + 1);
+      if (data.justCompletedCourse) burstConfetti();
+      // let the tick and the progress bar land before moving on
+      setJustDone(lesson._id);
+      if (lessons[idx + 1]) setTimeout(() => go(idx + 1), 650);
     } catch (e) {
       toast(e.message, "error");
     }
@@ -305,8 +311,13 @@ export default function LessonPlayer() {
           <Brand size={28} tagline={false} />
         </Link>
         <span className="title">{course.title}</span>
-        <span className="text-muted spacer" style={{ fontSize: 13 }}>
-          {lesson.module} · Lesson {idx + 1} of {lessons.length}
+        <span className="text-muted spacer flow-meta">
+          <span className="flow-meta-full">
+            {lesson.module} · Lesson {idx + 1} of {lessons.length}
+          </span>
+          <span className="flow-meta-short" aria-hidden="true">
+            {idx + 1}/{lessons.length}
+          </span>
         </span>
         <Link className="back" to="/my-learning" aria-label="Close">
           <X />
@@ -328,6 +339,15 @@ export default function LessonPlayer() {
             <button className="icon-btn" onClick={() => setNavOpen(false)} aria-label="Close lessons">
               <X />
             </button>
+          </div>
+          <div className="curriculum-progress">
+            <div className="cp-line">
+              <span>Your progress</span>
+              <strong>
+                {Math.min(doneSet.size, lessons.length)}/{lessons.length}
+              </strong>
+            </div>
+            <Bar value={pct} />
           </div>
           {modules.map((m) => (
             <div key={m.name}>
@@ -380,24 +400,35 @@ export default function LessonPlayer() {
             </div>
 
             <div className="lesson-nav">
-              <button className="btn btn-secondary" onClick={() => go(idx - 1)} disabled={idx === 0}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => go(idx - 1)}
+                disabled={idx === 0}
+                aria-label="Previous lesson"
+              >
                 <ChevronLeft />
-                Previous
+                <span className="nav-label">Previous</span>
               </button>
               <button
-                className={"btn btn-primary" + (saving ? " is-loading" : "")}
+                className={
+                  "btn btn-primary" +
+                  (saving ? " is-loading" : "") +
+                  (isDone ? " is-done" : "") +
+                  (justDone === lesson._id ? " just-done" : "")
+                }
                 onClick={complete}
                 disabled={isDone && idx === lessons.length - 1}
               >
-                <Check />
+                <Check className="done-tick" />
                 {isDone ? "Completed" : "Mark as Complete"}
               </button>
               <button
                 className="btn btn-secondary"
                 onClick={() => go(idx + 1)}
                 disabled={idx === lessons.length - 1}
+                aria-label="Next lesson"
               >
-                Next
+                <span className="nav-label">Next</span>
                 <ChevronRight />
               </button>
             </div>
