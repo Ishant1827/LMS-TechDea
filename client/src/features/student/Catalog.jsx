@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight, Search } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, CourseThumb, ErrorState } from "@/shared/components/ui";
+import { CenterLoader, CourseThumb, ErrorState, EmptyState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import Select from "@/shared/components/ui/Select";
 import { StarsDisplay } from "@/shared/components/ui/Stars";
@@ -75,63 +76,70 @@ export default function Catalog() {
 
   return (
     <Layout>
-      <div className="row" style={{ marginBottom: 14 }}>
-        <h2 style={{ margin: 0 }}>Browse Courses</h2>
+      <div className="page-head">
+        <h2>Browse Courses</h2>
         {data && (
-          <span className="text-muted" style={{ fontSize: 13, marginLeft: 4 }}>
+          <span className="page-count">
             {data.total} course{data.total === 1 ? "" : "s"}
           </span>
         )}
       </div>
 
       <div className="filter-bar">
-        <input
-          className="input"
-          placeholder="Search courses…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <Select
-          aria-label="Category"
-          value={category}
-          onChange={setCategory}
-          options={[
-            { value: "", label: "All categories" },
-            ...(data?.categories || []).map((c) => ({ value: c, label: c })),
-          ]}
-        />
-        <Select
-          aria-label="Difficulty"
-          value={difficulty}
-          onChange={setDifficulty}
-          options={[
-            { value: "", label: "Any level" },
-            ...DIFFICULTIES.map((d) => ({ value: d, label: cap(d) })),
-          ]}
-        />
-        <Select
-          aria-label="Sort by"
-          value={sort}
-          onChange={setSort}
-          options={SORTS.map(([v, label]) => ({ value: v, label }))}
-        />
+        <label className="search-field">
+          <Search aria-hidden="true" />
+          <input
+            className="input"
+            type="search"
+            placeholder="Search courses…"
+            aria-label="Search courses"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </label>
+        <div className="filter-selects">
+          <Select
+            aria-label="Category"
+            value={category}
+            onChange={setCategory}
+            options={[
+              { value: "", label: "All categories" },
+              ...(data?.categories || []).map((c) => ({ value: c, label: c })),
+            ]}
+          />
+          <Select
+            aria-label="Difficulty"
+            value={difficulty}
+            onChange={setDifficulty}
+            options={[
+              { value: "", label: "Any level" },
+              ...DIFFICULTIES.map((d) => ({ value: d, label: cap(d) })),
+            ]}
+          />
+          <Select
+            aria-label="Sort by"
+            value={sort}
+            onChange={setSort}
+            options={SORTS.map(([v, label]) => ({ value: v, label }))}
+          />
+        </div>
       </div>
 
       {status === "error" ? (
         <ErrorState title="Couldn't load the catalog" message={error.message} onRetry={reload} />
       ) : !data ? (
-        <CenterLoader />
+        <CenterLoader variant="cards" />
       ) : data.courses.length === 0 ? (
-        <p className="text-muted">No courses match your filters.</p>
+        <EmptyState title="No courses match" text="Try a different search, or clear the filters." />
       ) : (
         <>
-          <div className="grid-3">
+          <div className="course-grid">
             {data.courses.map((c) => {
               const owned = mineIds.has(c._id);
               return (
-                <div key={c._id} className="card elev-sm">
+                <div key={c._id} className="card elev-sm course-card">
                   <Link className="plain clickable" to={`/courses/${c._id}`} style={{ display: "block" }}>
-                    <CourseThumb src={c.thumbnailUrl} height={110} />
+                    <CourseThumb src={c.thumbnailUrl} />
                   </Link>
                   <div className="row" style={{ gap: 6 }}>
                     <span className="tag tag-neutral" style={{ width: "fit-content" }}>
@@ -164,9 +172,10 @@ export default function Catalog() {
                     </div>
                   )}
                   {owned ? (
-                    <button className="btn btn-secondary btn-block" style={{ justifyContent: "center" }} disabled>
-                      Enrolled
-                    </button>
+                    <Link className="btn btn-secondary btn-block" to={`/courses/${c._id}`}>
+                      Enrolled · Open
+                      <ArrowRight />
+                    </Link>
                   ) : (
                     <button
                       className={"btn btn-primary btn-block" + (enrolling === c._id ? " is-loading" : "")}

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarClock, ArrowRight } from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { CenterLoader, ErrorState, CountUp, EmptyState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import {
   kindMeta,
@@ -72,32 +72,31 @@ export default function StudentAssignments() {
       </div>
 
       {items.length === 0 ? (
-        <div className="card elev-sm" style={{ alignItems: "flex-start" }}>
-          <div className="card-title">Nothing assigned yet</div>
-          <div className="card-meta" style={{ marginBottom: 10 }}>
-            When a course you're enrolled in adds an assignment or quiz, it shows up here.
-          </div>
+        <EmptyState
+          title="Nothing assigned yet"
+          text="When a course you're enrolled in adds an assignment or quiz, it shows up here."
+        >
           <Link className="btn btn-primary" to="/my-learning">
             Go to My Learning <ArrowRight />
           </Link>
-        </div>
+        </EmptyState>
       ) : (
         <>
           <div className="stat-strip">
             <div className="card elev-sm stat">
-              <div className="card-title">{counts.todo}</div>
+              <div className="card-title"><CountUp value={counts.todo} /></div>
               <div className="card-meta">To do</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{counts.submitted}</div>
+              <div className="card-title"><CountUp value={counts.submitted} /></div>
               <div className="card-meta">Awaiting grade</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{counts.graded}</div>
+              <div className="card-title"><CountUp value={counts.graded} /></div>
               <div className="card-meta">Graded</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{avg == null ? "—" : `${avg}%`}</div>
+              <div className="card-title"><CountUp value={avg == null ? "—" : `${avg}%`} /></div>
               <div className="card-meta">Average score</div>
             </div>
           </div>
@@ -120,7 +119,7 @@ export default function StudentAssignments() {
           </div>
 
           {shown.length === 0 ? (
-            <p className="muted-sm">Nothing in this tab.</p>
+            <EmptyState compact title="Nothing in this tab" />
           ) : (
             <div className="asmt-list">
               {shown.map((it) => {

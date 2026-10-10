@@ -97,3 +97,19 @@ export const STATE_LABEL = {
   submitted: "Submitted",
   graded: "Graded",
 };
+
+// Countdown for the dashboard's "Due soon": { value: "5h", note: "left", tone }.
+// tone: "danger" under a day, "warn" under three, else "neutral".
+export function timeLeft(d) {
+  const ms = new Date(d).getTime() - Date.now();
+  if (ms <= 0) return { value: "Late", note: "overdue", tone: "danger" };
+  const h = ms / 3600000;
+  if (h < 1) return { value: `${Math.max(1, Math.round(ms / 60000))}m`, note: "left", tone: "danger" };
+  if (h < 24) return { value: `${Math.round(h)}h`, note: "left", tone: "danger" };
+  const days = Math.round(h / 24);
+  return {
+    value: `${days}d`,
+    note: days > 6 ? new Date(d).toLocaleDateString("en-IN", { weekday: "short", day: "numeric" }) : "left",
+    tone: h < 72 ? "warn" : "neutral",
+  };
+}

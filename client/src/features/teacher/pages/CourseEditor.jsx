@@ -1,6 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Trash2, ArrowUp, ArrowDown, ArrowLeft, Plus, ImagePlus, Eye } from "lucide-react";
+import {
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  Plus,
+  ImagePlus,
+  Eye,
+  EyeOff,
+  Pencil,
+  GripVertical,
+  ChevronsUp,
+  ChevronsDown,
+  FolderPlus,
+  ListPlus,
+  Rocket,
+  Layers,
+  PlayCircle,
+  FileText,
+  Paperclip,
+  Clock,
+  Users,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import Modal from "@/shared/components/ui/Modal";
@@ -32,6 +56,7 @@ export default function CourseEditor() {
   const isNew = !id;
   const nav = useNavigate();
   const toast = useToast();
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [form, setForm] = useState(emptyForm);
@@ -40,6 +65,7 @@ export default function CourseEditor() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const [loadError, setLoadError] = useState(null);
 
@@ -132,6 +158,31 @@ export default function CourseEditor() {
     setSaving(false);
   };
 
+  // The one place a course goes live or back to draft. Lessons only have a
+  // visibility switch inside their own form.
+  const togglePublish = async () => {
+    const enrolled = course.enrollmentCount || 0;
+    if (course.published && enrolled > 0) {
+      const ok = await confirm({
+        title: "Unpublish this course?",
+        message: `${enrolled} enrolled student${enrolled === 1 ? "" : "s"} will lose access until you publish it again.`,
+        detail: "Their progress is kept.",
+        confirmLabel: "Unpublish",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    setPublishing(true);
+    try {
+      const { data } = await api.patch(`/courses/${id}/publish`, { published: !course.published });
+      setCourse((c) => ({ ...c, published: data.course.published }));
+      toast(data.course.published ? "Course published — students can enrol" : "Moved back to draft");
+    } catch (e) {
+      toast(e.message, "error");
+    }
+    setPublishing(false);
+  };
+
   if (loadError)
     return (
       <Layout>
@@ -146,15 +197,17 @@ export default function CourseEditor() {
   if (loading)
     return (
       <Layout>
-        <CenterLoader />
+        <CenterLoader variant="editor" />
       </Layout>
     );
+
+  const visibleCount = lessons.filter((l) => l.published !== false).length;
 
   const detailsForm = (
     <form onSubmit={saveCourse}>
       <div className="field">
         <label>Thumbnail</label>
-        <CourseThumb src={form.thumbnailUrl} height={140} />
+        <CourseThumb src={form.thumbnailUrl} style={{ maxWidth: 360 }} />
         <div className="chip-row" style={{ marginTop: 8 }}>
           <label className="btn btn-secondary" style={{ cursor: "pointer" }}>
             <ImagePlus />
@@ -253,26 +306,52 @@ export default function CourseEditor() {
 
   return (
     <Layout>
-      <div className="row" style={{ marginBottom: 18 }}>
-        <Link className="back" to="/manage">
-          <ArrowLeft />
-          Courses
-        </Link>
-        <h2 style={{ margin: 0 }}>{isNew ? "New Course" : "Edit Course"}</h2>
-        {!isNew && course && (
-          <div className="chip-row" style={{ marginLeft: "auto" }}>
-            {lessons.length > 0 && (
-              <button className="btn btn-secondary" onClick={() => setPreviewOpen(true)}>
-                <Eye />
-                Preview as student
-              </button>
-            )}
+      <Link className="page-back" to="/manage">
+        <ArrowLeft />
+        Back to courses
+      </Link>
+      <div className="editor-head">
+        <div className="editor-head-text">
+          {!isNew && course && (
             <span className={"tag " + (course.published ? "tag-accent" : "tag-neutral")}>
               {course.published ? "Published" : "Draft"}
             </span>
+          )}
+          <h2>{isNew ? "New course" : course?.title || "Edit course"}</h2>
+          {!isNew && course && (
+            <p className="editor-head-sub">
+              {course.published
+                ? "Live in the catalog. Changes you save show up for students straight away."
+                : visibleCount
+                ? "Only you can see this course until you publish it."
+                : "Add at least one visible lesson, then publish."}
+            </p>
+          )}
+        </div>
+        {!isNew && course && (
+          <div className="editor-head-actions">
+            {lessons.length > 0 && (
+              <button className="btn btn-secondary" onClick={() => setPreviewOpen(true)}>
+                <Eye />
+                Preview
+              </button>
+            )}
+            <button
+              className={
+                "btn " + (course.published ? "btn-secondary" : "btn-primary") + (publishing ? " is-loading" : "")
+              }
+              onClick={togglePublish}
+              disabled={!course.published && !visibleCount}
+              title={!course.published && !visibleCount ? "Add a visible lesson first" : undefined}
+            >
+              {course.published ? <EyeOff /> : <Rocket />}
+              {course.published ? "Unpublish" : "Publish course"}
+            </button>
           </div>
         )}
       </div>
+
+      {!isNew && course && <StatusBar lessons={lessons} course={course} />}
 
       {previewOpen && (
         <Modal title="Preview as student" wide onClose={() => setPreviewOpen(false)}>
@@ -289,16 +368,18 @@ export default function CourseEditor() {
         </div>
       ) : (
         <div className="editor-split">
-          {/* details + status — right on desktop, first on mobile */}
+          {/* step 1, details + status — left column on desktop, top on one column */}
           <div className="col-details">
             <div className="card elev-sm" style={{ marginBottom: 16 }}>
-              <div className="card-kicker">Course details</div>
+              <div className="step-label">
+                <span className="step-num">1</span>
+                Course details
+              </div>
               {detailsForm}
             </div>
-            <StatusCard lessons={lessons} course={course} />
           </div>
 
-          {/* curriculum — left / main */}
+          {/* step 2, curriculum — right / wider column */}
           <div className="col-curriculum">
             <LessonManager courseId={id} lessons={lessons} setLessons={setLessons} />
           </div>
@@ -309,33 +390,64 @@ export default function CourseEditor() {
 }
 
 /* ── status ─────────────────────────────────────────────────────────────── */
-function StatusCard({ lessons, course }) {
+// One strip under the header: what the course holds, and — while it's still a
+// draft — what's left before it's worth publishing. Only a visible lesson is
+// required (the server refuses without one); the rest are what students see
+// first in the catalog, so they're flagged rather than enforced.
+function StatusBar({ lessons, course }) {
+  const visible = lessons.filter((l) => l.published !== false);
+  const hidden = lessons.length - visible.length;
   const moduleCount = new Set(lessons.map((l) => l.module)).size;
   const byType = { video: 0, reading: 0, file: 0 };
   lessons.forEach((l) => {
     byType[l.type] = (byType[l.type] || 0) + 1;
   });
   const minutes = lessons.reduce((s, l) => s + (Number(l.durationMin) || 0), 0);
-  const drafts = lessons.filter((l) => l.published === false).length;
 
-  const Row = ({ label, value }) => (
-    <div className="status-row">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+  const stats = [
+    [Layers, moduleCount, moduleCount === 1 ? "Module" : "Modules"],
+    [PlayCircle, byType.video, byType.video === 1 ? "Video" : "Videos"],
+    [FileText, byType.reading, byType.reading === 1 ? "Reading" : "Readings"],
+    [Paperclip, byType.file, byType.file === 1 ? "File" : "Files"],
+    [Clock, minutes ? fmtDuration(minutes) : "—", "Total length"],
+    [Users, course.enrollmentCount ?? 0, course.enrollmentCount === 1 ? "Student" : "Students"],
+  ];
+  if (hidden) stats.push([EyeOff, hidden, "Hidden"]);
+
+  const checks = [
+    [visible.length > 0, "At least one visible lesson", true],
+    [!!course.thumbnailUrl, "Cover image"],
+    [!!course.description?.trim(), "Description"],
+  ];
+  const left = checks.filter(([ok]) => !ok).length;
 
   return (
-    <div className="card elev-sm">
-      <div className="card-kicker">Status</div>
-      <Row label="Modules" value={moduleCount} />
-      <Row label="Video lessons" value={byType.video} />
-      <Row label="Reading material" value={byType.reading} />
-      <Row label="Materials (files)" value={byType.file} />
-      {drafts > 0 && <Row label="Drafts (hidden)" value={drafts} />}
-      <div className="hr" style={{ margin: "8px 0" }} />
-      <Row label="Total length" value={minutes ? fmtDuration(minutes) : "—"} />
-      <Row label="Students enrolled" value={course?.enrollmentCount ?? 0} />
+    <div className="card elev-sm status-bar">
+      <div className="sb-stats">
+        {stats.map(([Icon, value, label]) => (
+          <div key={label} className="sb-stat">
+            <Icon aria-hidden="true" />
+            <b>{value}</b>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+      {!course.published && (
+        <div className="sb-checks">
+          <span className="sb-checks-h">
+            {left ? `Before you publish · ${left} to go` : "Ready to publish"}
+          </span>
+          <ul>
+            {checks.map(([ok, label, required]) => (
+              <li key={label} className={ok ? "is-done" : required ? "is-required" : ""}>
+                {ok ? <CheckCircle2 aria-hidden="true" /> : <Circle aria-hidden="true" />}
+                {label}
+                {!ok && <small>{required ? "required" : "recommended"}</small>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -353,23 +465,58 @@ const blankLesson = {
   fileName: "",
 };
 
+// Put lesson `dragId` into `module`, just before `beforeId` — or at the end of
+// that module when beforeId is null. Returns the new flat order, plus the
+// moved lesson when its module changed (that needs saving on its own).
+function placeLesson(flat, dragId, module, beforeId) {
+  const dragged = flat.find((l) => l._id === dragId);
+  if (!dragged) return { next: flat, changed: null };
+  const rest = flat.filter((l) => l._id !== dragId);
+  const moved = { ...dragged, module };
+  let at;
+  if (beforeId) at = rest.findIndex((l) => l._id === beforeId);
+  else {
+    at = -1;
+    rest.forEach((l, i) => {
+      if (l.module === module) at = i;
+    });
+    at = at === -1 ? rest.length : at + 1;
+  }
+  rest.splice(at, 0, moved);
+  return { next: rest, changed: dragged.module !== module ? moved : null };
+}
+
 function LessonManager({ courseId, lessons, setLessons }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [draft, setDraft] = useState(blankLesson);
   const [editingId, setEditingId] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const formRef = useRef(null);
+  // drag and drop (desktop): what's being dragged, and where it would land
+  const [dragId, setDragId] = useState(null);
+  const [drop, setDrop] = useState(null); // { module, beforeId } | null
+  const [renaming, setRenaming] = useState(null); // { from, to }
 
   const reload = () =>
     api.get(`/courses/${courseId}/lessons`).then((r) => setLessons(r.data.lessons));
 
   const set = (k) => (e) => setDraft({ ...draft, [k]: e.target.value });
 
-  const focusForm = (preset) => {
+  const groups = groupByModule(lessons);
+  const total = lessons.length;
+  const minutes = lessons.reduce((s, l) => s + (Number(l.durationMin) || 0), 0);
+
+  const openAdd = (preset) => {
     setEditingId(null);
-    setDraft({ ...blankLesson, ...preset });
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setDraft({ ...blankLesson, module: groups[groups.length - 1]?.name || "Introduction", ...preset });
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingId(null);
+    setDraft(blankLesson);
   };
 
   const submit = async (e) => {
@@ -381,9 +528,8 @@ function LessonManager({ courseId, lessons, setLessons }) {
       if (editingId) await api.put(`/courses/${courseId}/lessons/${editingId}`, body);
       else await api.post(`/courses/${courseId}/lessons`, body);
       await reload();
-      setDraft(blankLesson);
-      setEditingId(null);
       toast(editingId ? "Lesson updated" : "Lesson added");
+      closeForm();
     } catch (e) {
       toast(e.message, "error");
     }
@@ -403,16 +549,7 @@ function LessonManager({ courseId, lessons, setLessons }) {
       fileUrl: l.fileUrl || "",
       fileName: l.fileName || "",
     });
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
-
-  const togglePublished = async (l) => {
-    try {
-      await api.put(`/courses/${courseId}/lessons/${l._id}`, { published: l.published === false });
-      await reload();
-    } catch (e) {
-      toast(e.message, "error");
-    }
+    setFormOpen(true);
   };
 
   const del = async (l) => {
@@ -428,281 +565,463 @@ function LessonManager({ courseId, lessons, setLessons }) {
     try {
       await api.delete(`/courses/${courseId}/lessons/${l._id}`);
       await reload();
-      if (editingId === l._id) {
-        setEditingId(null);
-        setDraft(blankLesson);
-      }
       toast("Lesson deleted");
     } catch (e) {
       toast(e.message, "error");
     }
   };
 
-  // reorder within one module's items, then persist the whole flat order
-  const move = async (moduleName, localIdx, dir) => {
-    const groups = groupByModule(lessons);
-    const g = groups.find((x) => x.name === moduleName);
-    const j = localIdx + dir;
-    if (!g || j < 0 || j >= g.items.length) return;
-    const reordered = g.items.slice();
-    [reordered[localIdx], reordered[j]] = [reordered[j], reordered[localIdx]];
-
-    let k = 0;
-    const flat = lessons.map((l) => (l.module === moduleName ? reordered[k++] : l));
-    setLessons(flat);
+  // Show the new order at once, then save it. A lesson that changed module
+  // is saved first, so a failure can't leave it ordered into the wrong one.
+  const persist = async (next, changed) => {
+    setLessons(next);
     try {
-      await api.put(`/courses/${courseId}/lessons/reorder`, { orderedIds: flat.map((l) => l._id) });
+      if (changed) await api.put(`/courses/${courseId}/lessons/${changed._id}`, { module: changed.module });
+      await api.put(`/courses/${courseId}/lessons/reorder`, { orderedIds: next.map((l) => l._id) });
     } catch (e) {
       toast(e.message, "error");
       reload();
     }
   };
 
-  const groups = groupByModule(lessons);
-  const total = lessons.length;
-  const minutes = lessons.reduce((s, l) => s + (Number(l.durationMin) || 0), 0);
+  // ↑ / ↓ — within a module, and across the edge into the neighbouring one,
+  // so every position is reachable without dragging (phones, keyboards).
+  const move = (gi, li, dir) => {
+    const g = groups[gi];
+    const l = g.items[li];
+    const j = li + dir;
+    if (j >= 0 && j < g.items.length) {
+      const before = dir < 0 ? g.items[j]._id : g.items[j + 1]?._id || null;
+      const { next } = placeLesson(lessons, l._id, g.name, before);
+      return persist(next, null);
+    }
+    const ng = groups[gi + dir];
+    if (!ng) return;
+    // up from the top → bottom of the module above; down from the bottom → top of the one below
+    const before = dir < 0 ? null : ng.items[0]._id;
+    const { next, changed } = placeLesson(lessons, l._id, ng.name, before);
+    persist(next, changed);
+  };
+
+  const moveModule = (gi, dir) => {
+    const order = groups.slice();
+    const j = gi + dir;
+    if (j < 0 || j >= order.length) return;
+    [order[gi], order[j]] = [order[j], order[gi]];
+    persist(order.flatMap((g) => g.items), null);
+  };
+
+  const saveRename = async () => {
+    const { from, to } = renaming;
+    const name = to.trim();
+    setRenaming(null);
+    if (!name || name === from) return;
+    if (groups.some((g) => g.name === name))
+      return toast(`There's already a module called "${name}"`, "error");
+    const items = lessons.filter((l) => l.module === from);
+    setLessons(lessons.map((l) => (l.module === from ? { ...l, module: name } : l)));
+    try {
+      await Promise.all(
+        items.map((l) => api.put(`/courses/${courseId}/lessons/${l._id}`, { module: name }))
+      );
+      toast("Module renamed");
+    } catch (e) {
+      toast(e.message, "error");
+      reload();
+    }
+  };
+
+  // drag handlers — the row under the pointer decides before/after by its midpoint
+  const onRowDragOver = (e, module, l, nextId) => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    const before = e.clientY < r.top + r.height / 2 ? l._id : nextId;
+    if (drop?.module !== module || drop?.beforeId !== before) setDrop({ module, beforeId: before });
+  };
+  const onModuleDragOver = (e, module) => {
+    if (!dragId) return;
+    e.preventDefault();
+    if (drop?.module !== module || drop?.beforeId !== null) setDrop({ module, beforeId: null });
+  };
+  const onDrop = (e) => {
+    e.preventDefault();
+    if (dragId && drop && drop.beforeId !== dragId) {
+      const { next, changed } = placeLesson(lessons, dragId, drop.module, drop.beforeId);
+      const same = next.every((l, i) => l._id === lessons[i]._id) && !changed;
+      if (!same) persist(next, changed);
+    }
+    setDragId(null);
+    setDrop(null);
+  };
+  const endDrag = () => {
+    setDragId(null);
+    setDrop(null);
+  };
+
+  const first = (gi, li) => gi === 0 && li === 0;
+  const last = (gi, li) => gi === groups.length - 1 && li === groups[gi].items.length - 1;
 
   return (
     <div>
-      <div className="row" style={{ marginBottom: 10 }}>
-        <h4 className="section-h" style={{ margin: 0 }}>
+      <div className="lm-head">
+        <h4 className="step-label">
+          <span className="step-num">2</span>
           Curriculum
         </h4>
-        <span className="muted-sm" style={{ marginLeft: "auto" }}>
-          {total} item{total === 1 ? "" : "s"}
+        <span className="muted-sm">
+          {total} lesson{total === 1 ? "" : "s"}
+          {groups.length > 1 ? ` · ${groups.length} modules` : ""}
           {minutes ? ` · ${fmtDuration(minutes)}` : ""}
         </span>
+        <button type="button" className="btn btn-primary lm-add" onClick={() => openAdd()}>
+          <Plus />
+          Add lesson
+        </button>
       </div>
 
-      {total === 0 && (
-        <p className="muted-sm">
-          Nothing here yet. Add your first lesson below — a course needs at least one before it can be
-          published. Type a new name in the <strong>Module</strong> field to start a new module.
-        </p>
+      {total === 0 ? (
+        <div className="card elev-sm quiet-note lm-empty">
+          <ListPlus />
+          <div>
+            <b>No lessons yet</b>
+            <span>
+              Add your first video, reading or file. A course needs at least one visible lesson
+              before it can be published.
+            </span>
+          </div>
+        </div>
+      ) : (
+        total > 1 && (
+          <p className="lm-hint">
+            <GripVertical aria-hidden="true" />
+            Drag lessons to reorder them or move them between modules — or use the arrows.
+          </p>
+        )
       )}
 
-      {groups.map((g) => (
-        <div key={g.name} className="mod-section">
-          <div className="mod-head">
-            <span>{g.name}</span>
+      {groups.map((g, gi) => (
+        <section
+          key={g.name}
+          className={"mod-section lm-module" + (drop?.module === g.name && drop.beforeId === null ? " is-drop-end" : "")}
+          onDragOver={(e) => onModuleDragOver(e, g.name)}
+          onDrop={onDrop}
+        >
+          <div className="mod-head lm-mod-head">
+            <span className="lm-mod-num">{gi + 1}</span>
+            {renaming?.from === g.name ? (
+              <input
+                className="input lm-rename"
+                value={renaming.to}
+                autoFocus
+                aria-label="Module name"
+                onChange={(e) => setRenaming({ ...renaming, to: e.target.value })}
+                onBlur={saveRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") setRenaming(null);
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                className="lm-mod-name"
+                onClick={() => setRenaming({ from: g.name, to: g.name })}
+                title="Rename module"
+                aria-label={`Rename module ${g.name}`}
+              >
+                {g.name}
+                <Pencil aria-hidden="true" />
+              </button>
+            )}
             <span className="count">
-              {g.items.length} item{g.items.length === 1 ? "" : "s"}
+              {g.items.length} lesson{g.items.length === 1 ? "" : "s"}
             </span>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ marginLeft: "auto" }}
-              onClick={() => focusForm({ module: g.name })}
-            >
-              <Plus />
-              Add
-            </button>
+            <span className="lm-mod-tools">
+              {groups.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="lm-icon"
+                    onClick={() => moveModule(gi, -1)}
+                    disabled={gi === 0}
+                    aria-label={`Move module ${g.name} up`}
+                    title="Move module up"
+                  >
+                    <ChevronsUp />
+                  </button>
+                  <button
+                    type="button"
+                    className="lm-icon"
+                    onClick={() => moveModule(gi, 1)}
+                    disabled={gi === groups.length - 1}
+                    aria-label={`Move module ${g.name} down`}
+                    title="Move module down"
+                  >
+                    <ChevronsDown />
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost lm-mod-add"
+                onClick={() => openAdd({ module: g.name })}
+              >
+                <Plus />
+                Add
+              </button>
+            </span>
           </div>
-          {g.items.map((l, i) => {
-            const m = typeMeta(l.type);
-            const isDraft = l.published === false;
-            return (
-              <div key={l._id} className={"lesson-row" + (isDraft ? " is-draft" : "")}>
-                <span className="type-chip" style={{ flex: "none" }} title={m.label}>
-                  <m.Icon />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>
-                    {l.title}
-                    {isDraft && (
-                      <span className="tag tag-neutral" style={{ marginLeft: 6, fontSize: 9 }}>
-                        Draft
-                      </span>
-                    )}
-                  </div>
-                  <div className="muted-sm">
-                    {m.label}
-                    {l.durationMin ? ` · ${fmtDuration(l.durationMin)}` : ""}
-                    {l.type === "video" && l.fileUrl ? " · has attachment" : ""}
-                  </div>
+
+          <div className="lm-list">
+            {g.items.map((l, li) => {
+              const m = typeMeta(l.type);
+              const hidden = l.published === false;
+              const nextId = g.items[li + 1]?._id || null;
+              const dropHere = drop?.module === g.name && drop.beforeId === l._id && dragId !== l._id;
+              return (
+                <div
+                  key={l._id}
+                  className={
+                    "lesson-row lm-row" +
+                    (hidden ? " is-draft" : "") +
+                    (dragId === l._id ? " is-dragging" : "") +
+                    (dropHere ? " is-drop-before" : "")
+                  }
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", l._id);
+                    setDragId(l._id);
+                  }}
+                  onDragEnd={endDrag}
+                  onDragOver={(e) => onRowDragOver(e, g.name, l, nextId)}
+                  onDrop={onDrop}
+                >
+                  <span className="lm-grip" aria-hidden="true">
+                    <GripVertical />
+                  </span>
+                  <span className="type-chip" style={{ flex: "none" }} title={m.label}>
+                    <m.Icon />
+                  </span>
+                  <button type="button" className="lm-main" onClick={() => edit(l)}>
+                    <span className="lm-title">
+                      {l.title}
+                      {hidden && (
+                        <span className="tag tag-neutral lm-hidden">
+                          <EyeOff /> Hidden
+                        </span>
+                      )}
+                    </span>
+                    <span className="muted-sm">
+                      {m.label}
+                      {l.durationMin ? ` · ${fmtDuration(l.durationMin)}` : ""}
+                      {l.type === "video" && l.fileUrl ? " · has attachment" : ""}
+                    </span>
+                  </button>
+                  <span className="lm-actions">
+                    <button
+                      type="button"
+                      className="lm-icon"
+                      onClick={() => move(gi, li, -1)}
+                      disabled={first(gi, li)}
+                      aria-label="Move up"
+                      title={li === 0 ? "Move to the module above" : "Move up"}
+                    >
+                      <ArrowUp />
+                    </button>
+                    <button
+                      type="button"
+                      className="lm-icon"
+                      onClick={() => move(gi, li, 1)}
+                      disabled={last(gi, li)}
+                      aria-label="Move down"
+                      title={li === g.items.length - 1 ? "Move to the module below" : "Move down"}
+                    >
+                      <ArrowDown />
+                    </button>
+                    <button
+                      type="button"
+                      className="lm-icon"
+                      onClick={() => edit(l)}
+                      aria-label={`Edit ${l.title}`}
+                      title="Edit"
+                    >
+                      <Pencil />
+                    </button>
+                    <button
+                      type="button"
+                      className="lm-icon is-danger"
+                      onClick={() => del(l)}
+                      aria-label={`Delete ${l.title}`}
+                      title="Delete"
+                    >
+                      <Trash2 />
+                    </button>
+                  </span>
                 </div>
-                <div className="chip-row" style={{ flex: "none" }}>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => togglePublished(l)}
-                    title={isDraft ? "Make visible to students" : "Hide from students (draft)"}
-                  >
-                    {isDraft ? "Publish" : "Unpublish"}
-                  </button>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => move(g.name, i, -1)}
-                    disabled={i === 0}
-                    aria-label="Move up"
-                  >
-                    <ArrowUp />
-                  </button>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => move(g.name, i, 1)}
-                    disabled={i === g.items.length - 1}
-                    aria-label="Move down"
-                  >
-                    <ArrowDown />
-                  </button>
-                  <button className="btn btn-ghost" onClick={() => edit(l)}>
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-ghost"
-                    style={{ color: "var(--color-danger)" }}
-                    onClick={() => del(l)}
-                    aria-label="Delete"
-                  >
-                    <Trash2 />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </section>
       ))}
 
-      <form ref={formRef} onSubmit={submit} className="card elev-sm" style={{ marginTop: 12 }}>
-        <div className="card-kicker">{editingId ? "Edit item" : "Add item"}</div>
+      {total > 0 && (
+        <button type="button" className="lm-new-module" onClick={() => openAdd({ module: "" })}>
+          <FolderPlus />
+          New module
+        </button>
+      )}
 
-        <div className="field">
-          <label>Type</label>
-          <div className="seg">
-            {LESSON_TYPES.map((t) => (
-              <label className="seg-opt" key={t.value}>
-                <input
-                  type="radio"
-                  name="lesson-type"
-                  value={t.value}
-                  checked={draft.type === t.value}
-                  onChange={() => setDraft({ ...draft, type: t.value })}
-                />
-                <t.Icon style={{ width: 13, height: 13 }} />
-                {t.label}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-grid">
-          <div className="field">
-            <label>Title</label>
-            <input className="input" value={draft.title} onChange={set("title")} />
-          </div>
-          <div className="field">
-            <label>Module</label>
-            <input className="input" value={draft.module} onChange={set("module")} />
-          </div>
-        </div>
-        <div className="field">
-          <label>Duration (minutes)</label>
-          <input
-            className="input"
-            type="number"
-            min="0"
-            style={{ maxWidth: 160 }}
-            value={draft.durationMin}
-            onChange={set("durationMin")}
-          />
-        </div>
-
-        {draft.type === "video" && (
-          <>
+      {formOpen && (
+        <Modal title={editingId ? "Edit lesson" : "Add lesson"} onClose={closeForm}>
+          <form onSubmit={submit} className="lm-form">
             <div className="field">
-              <label>Video URL (YouTube / Vimeo — embedded, not uploaded)</label>
+              <label>Type</label>
+              <div className="seg">
+                {LESSON_TYPES.map((t) => (
+                  <label className="seg-opt" key={t.value}>
+                    <input
+                      type="radio"
+                      name="lesson-type"
+                      value={t.value}
+                      checked={draft.type === t.value}
+                      onChange={() => setDraft({ ...draft, type: t.value })}
+                    />
+                    <t.Icon style={{ width: 13, height: 13 }} />
+                    {t.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Title</label>
+              <input className="input" value={draft.title} onChange={set("title")} autoFocus />
+            </div>
+            <div className="form-grid">
+              <div className="field">
+                <label>Module</label>
+                <input
+                  className="input"
+                  list="lm-modules"
+                  value={draft.module}
+                  onChange={set("module")}
+                  placeholder="Pick one, or type a new name"
+                />
+                <datalist id="lm-modules">
+                  {groups.map((g) => (
+                    <option key={g.name} value={g.name} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="field">
+                <label>Duration (minutes)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  value={draft.durationMin}
+                  onChange={set("durationMin")}
+                />
+              </div>
+            </div>
+
+            {draft.type === "video" && (
+              <>
+                <div className="field">
+                  <label>Video URL (YouTube / Vimeo — embedded, not uploaded)</label>
+                  <input
+                    className="input"
+                    value={draft.videoUrl}
+                    onChange={set("videoUrl")}
+                    placeholder="https://youtube.com/watch?v=…"
+                  />
+                </div>
+                <ReadingEditor
+                  label="Description (shown under the video — optional)"
+                  placeholder="What this video covers, key points, timestamps…"
+                  minHeight={110}
+                  value={draft.content}
+                  onChange={set("content")}
+                />
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Attachment file URL (optional)</label>
+                    <input
+                      className="input"
+                      value={draft.fileUrl}
+                      onChange={set("fileUrl")}
+                      placeholder="https://…"
+                    />
+                  </div>
+                  <div className="field">
+                    <label>File name shown to students</label>
+                    <input
+                      className="input"
+                      value={draft.fileName}
+                      onChange={set("fileName")}
+                      placeholder="Slides.pdf"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            {draft.type === "reading" && (
+              <ReadingEditor value={draft.content} onChange={set("content")} />
+            )}
+            {draft.type === "file" && (
+              <>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>File URL</label>
+                    <input className="input" value={draft.fileUrl} onChange={set("fileUrl")} placeholder="https://…" />
+                  </div>
+                  <div className="field">
+                    <label>File name shown to students</label>
+                    <input
+                      className="input"
+                      value={draft.fileName}
+                      onChange={set("fileName")}
+                      placeholder="Worksheet.pdf"
+                    />
+                  </div>
+                </div>
+                <div className="muted-sm" style={{ marginTop: -4 }}>
+                  A direct link, or a Google Drive / Dropbox share link (set sharing to “Anyone with the
+                  link”). PDFs and images preview inside the lesson; Word &amp; PowerPoint use the Office
+                  viewer; other types show a download button.
+                </div>
+              </>
+            )}
+
+            {/* Per-lesson visibility, not a second publish button: the course
+                itself is published from the page header. */}
+            <label className="radio lm-visible">
               <input
-                className="input"
-                value={draft.videoUrl}
-                onChange={set("videoUrl")}
-                placeholder="https://youtube.com/watch?v=…"
+                type="checkbox"
+                checked={draft.published}
+                onChange={(e) => setDraft({ ...draft, published: e.target.checked })}
               />
-            </div>
-            <ReadingEditor
-              label="Description (shown under the video — optional)"
-              placeholder="What this video covers, key points, timestamps…"
-              minHeight={110}
-              value={draft.content}
-              onChange={set("content")}
-            />
-            <div className="form-grid">
-              <div className="field">
-                <label>Attachment file URL (optional)</label>
-                <input
-                  className="input"
-                  value={draft.fileUrl}
-                  onChange={set("fileUrl")}
-                  placeholder="https://…"
-                />
-              </div>
-              <div className="field">
-                <label>File name shown to students</label>
-                <input
-                  className="input"
-                  value={draft.fileName}
-                  onChange={set("fileName")}
-                  placeholder="Slides.pdf"
-                />
-              </div>
-            </div>
-          </>
-        )}
-        {draft.type === "reading" && (
-          <ReadingEditor value={draft.content} onChange={set("content")} />
-        )}
-        {draft.type === "file" && (
-          <>
-            <div className="form-grid">
-              <div className="field">
-                <label>File URL</label>
-                <input className="input" value={draft.fileUrl} onChange={set("fileUrl")} placeholder="https://…" />
-              </div>
-              <div className="field">
-                <label>File name shown to students</label>
-                <input
-                  className="input"
-                  value={draft.fileName}
-                  onChange={set("fileName")}
-                  placeholder="Worksheet.pdf"
-                />
-              </div>
-            </div>
-            <div className="muted-sm" style={{ marginTop: -4 }}>
-              A direct link, or a Google Drive / Dropbox share link (set sharing to “Anyone with the
-              link”). PDFs and images preview inside the lesson; Word &amp; PowerPoint use the Office
-              viewer; other types show a download button.
-            </div>
-          </>
-        )}
+              <span className="dot" />
+              <span>
+                Show this lesson to students
+                <small>{draft.published ? "Visible once the course is published" : "Hidden — only you can see it"}</small>
+              </span>
+            </label>
 
-        <label className="radio" style={{ marginTop: 8, fontSize: 13 }}>
-          <input
-            type="checkbox"
-            checked={draft.published}
-            onChange={(e) => setDraft({ ...draft, published: e.target.checked })}
-          />
-          <span className="dot" />
-          Visible to students {draft.published ? "" : "— saved as a draft"}
-        </label>
-
-        <div className="chip-row" style={{ marginTop: 10 }}>
-          <button className={"btn btn-primary" + (busy ? " is-loading" : "")}>
-            {editingId ? "Update item" : "Add item"}
-          </button>
-          {editingId && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setEditingId(null);
-                setDraft(blankLesson);
-              }}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+            <div className="lm-form-actions">
+              <button type="button" className="btn btn-secondary" onClick={closeForm}>
+                Cancel
+              </button>
+              <button className={"btn btn-primary" + (busy ? " is-loading" : "")}>
+                {editingId ? "Save lesson" : "Add lesson"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

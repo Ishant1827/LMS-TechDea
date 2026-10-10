@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
-import { Bar, CenterLoader, CourseThumb, ErrorState } from "@/shared/components/ui";
+import { Bar, CenterLoader, CourseThumb, ErrorState, EmptyState } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
@@ -49,7 +49,7 @@ export default function MyLearning() {
   if (status === "loading")
     return (
       <Layout>
-        <CenterLoader />
+        <CenterLoader variant="grid" />
       </Layout>
     );
 
@@ -65,15 +65,11 @@ export default function MyLearning() {
     return (
       <Layout>
         <h2 className="page-title">My Learning</h2>
-        <div className="card elev-sm" style={{ alignItems: "flex-start" }}>
-          <div className="card-title">You haven't enrolled in anything yet</div>
-          <div className="card-meta" style={{ marginBottom: 10 }}>
-            Every course in the catalog is free.
-          </div>
+        <EmptyState title="Start your first course" text="Every course in the catalog is free.">
           <Link className="btn btn-primary" to="/courses">
             Browse Courses
           </Link>
-        </div>
+        </EmptyState>
       </Layout>
     );
 
@@ -85,7 +81,7 @@ export default function MyLearning() {
           const done = e.percent >= 100;
           return (
             <div key={e._id} className="card elev-sm">
-              <CourseThumb src={e.course.thumbnailUrl} height={100} />
+              <CourseThumb src={e.course.thumbnailUrl} />
               <div className="row" style={{ gap: 8 }}>
                 <div className="card-title" style={{ flex: 1 }}>
                   {e.course.title}

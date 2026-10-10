@@ -15,8 +15,9 @@ import {
 import api from "@/shared/api/client";
 import Layout from "@/shared/components/layout/Layout";
 import Modal from "@/shared/components/ui/Modal";
-import { CenterLoader, ErrorState } from "@/shared/components/ui";
+import { CenterLoader, ErrorState, CountUp } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
+import { useIsNarrow } from "@/shared/hooks/useMediaQuery";
 import Select from "@/shared/components/ui/Select";
 import { useToast } from "@/shared/context/ToastContext";
 import { useConfirm } from "@/shared/context/ConfirmContext";
@@ -488,7 +489,7 @@ function SubmissionsInbox({ assessmentId, onClose }) {
           onRetry={reload}
         />
       ) : !data ? (
-        <CenterLoader />
+        <CenterLoader variant="rows" />
       ) : (
         <>
           <div className="inbox-stats">
@@ -546,6 +547,7 @@ export default function TeacherAssignments() {
   const confirm = useConfirm();
 
   const [courseId, setCourseId] = useState("");
+  const narrow = useIsNarrow();
 
   const [builder, setBuilder] = useState(null); // { kind, existing? }
   const [inboxId, setInboxId] = useState(null);
@@ -647,16 +649,6 @@ export default function TeacherAssignments() {
           <h2>Assignments &amp; Quizzes</h2>
           <div className="asmt-sub">Build them per course, publish, then grade what comes in.</div>
         </div>
-        {courses.length > 0 && (
-          <div className="asmt-actions">
-            <button className="btn btn-secondary" onClick={() => setBuilder({ kind: "assignment" })}>
-              <Plus /> Assignment
-            </button>
-            <button className="btn btn-primary" onClick={() => setBuilder({ kind: "quiz" })}>
-              <Plus /> Quiz
-            </button>
-          </div>
-        )}
       </div>
 
       {courses.length === 0 ? (
@@ -679,23 +671,33 @@ export default function TeacherAssignments() {
                 }))}
               />
             </div>
+            {/* Beside the picker, not up in the page header: what you create
+                goes into the course chosen here, so pick first, then create. */}
+            <div className="asmt-actions">
+              <button className="btn btn-secondary" onClick={() => setBuilder({ kind: "assignment" })}>
+                <Plus /> Assignment
+              </button>
+              <button className="btn btn-primary" onClick={() => setBuilder({ kind: "quiz" })}>
+                <Plus /> Quiz
+              </button>
+            </div>
           </div>
 
           <div className="stat-strip">
             <div className="card elev-sm stat">
-              <div className="card-title">{stats.total}</div>
+              <div className="card-title"><CountUp value={stats.total} /></div>
               <div className="card-meta">Total</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{stats.published}</div>
+              <div className="card-title"><CountUp value={stats.published} /></div>
               <div className="card-meta">Published</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{stats.drafts}</div>
+              <div className="card-title"><CountUp value={stats.drafts} /></div>
               <div className="card-meta">Drafts</div>
             </div>
             <div className="card elev-sm stat">
-              <div className="card-title">{stats.toGrade}</div>
+              <div className="card-title"><CountUp value={stats.toGrade} /></div>
               <div className="card-meta">Awaiting grade</div>
             </div>
           </div>
@@ -707,16 +709,73 @@ export default function TeacherAssignments() {
               onRetry={listLoad.reload}
             />
           ) : !list ? (
-            <CenterLoader />
+            <CenterLoader variant="rows" />
           ) : list.length === 0 ? (
             <div className="card elev-sm" style={{ alignItems: "flex-start" }}>
               <div className="card-title">Nothing for this course yet</div>
               <div className="card-meta" style={{ marginBottom: 10 }}>
-                Use “Assignment” or “Quiz” above to create the first one.
+                Use “Assignment” or “Quiz” beside the course picker to create the first one.
               </div>
               <button className="btn btn-primary" onClick={() => setBuilder({ kind: "quiz" })}>
                 <Plus /> New quiz
               </button>
+            </div>
+          ) : narrow ? (
+            /* Four action buttons per row don't fit a phone; one card each. */
+            <div className="mcard-list">
+              {list.map((a) => {
+                const { Icon, label } = kindMeta(a.kind);
+                return (
+                  <article key={a._id} className="mcard card elev-sm">
+                    <div className="mcard-top">
+                      <button
+                        className="mcard-title linklike"
+                        onClick={() => setBuilder({ kind: a.kind, existing: a })}
+                      >
+                        {a.title}
+                      </button>
+                      <span className={"tag " + (a.published ? "tag-accent" : "tag-neutral")}>
+                        {a.published ? "Published" : "Draft"}
+                      </span>
+                    </div>
+                    <div className="mcard-sub" style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                      <Icon style={{ width: 12, height: 12 }} />
+                      {label}
+                      {a.kind === "quiz" && ` · ${a.questions?.length || 0} Q · pass ${a.passPercent}%`}
+                      {a.dueAt && ` · due ${fmtDateTime(a.dueAt)}`}
+                    </div>
+                    <div className="mcard-stats">
+                      <div>
+                        <b>{a.submittedCount}</b>
+                        <span>Submitted</span>
+                      </div>
+                      <div>
+                        <b>{a.gradedCount}</b>
+                        <span>Graded</span>
+                      </div>
+                    </div>
+                    <div className="mcard-actions">
+                      <button className="btn btn-secondary" onClick={() => setInboxId(a._id)}>
+                        <Inbox /> Submissions
+                      </button>
+                      <button className="btn btn-secondary" onClick={() => togglePublish(a)}>
+                        {a.published ? <EyeOff /> : <Eye />}
+                        {a.published ? "Unpublish" : "Publish"}
+                      </button>
+                      <button className="btn btn-secondary" onClick={() => setBuilder({ kind: a.kind, existing: a })}>
+                        <Pencil /> Edit
+                      </button>
+                      <button
+                        className="btn btn-secondary mcard-del"
+                        onClick={() => remove(a)}
+                        aria-label={`Delete ${a.title}`}
+                      >
+                        <Trash2 /> Delete
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div className="table-wrap">

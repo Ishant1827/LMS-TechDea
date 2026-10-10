@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { BootLoader } from "@/shared/components/ui";
 import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
+import WelcomeScreen from "@/shared/components/layout/WelcomeScreen";
 import { roleHome } from "@/shared/lib/roles";
 
 import Login from "@/features/auth/pages/Login";
@@ -70,42 +71,46 @@ export default function App() {
   const S = (el, roles) => <ProtectedRoute roles={roles}>{el}</ProtectedRoute>;
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to={home} replace /> : <Login />} />
-      <Route path="/signup" element={user ? <Navigate to={home} replace /> : <Signup />} />
-      <Route path="/forgot-password" element={user ? <Navigate to={home} replace /> : <ForgotPassword />} />
+    <>
+      {/* after sign-in only; the page below loads while it's showing */}
+      {user && <WelcomeScreen key={user._id} user={user} />}
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to={home} replace /> : <Login />} />
+        <Route path="/signup" element={user ? <Navigate to={home} replace /> : <Signup />} />
+        <Route path="/forgot-password" element={user ? <Navigate to={home} replace /> : <ForgotPassword />} />
 
 
-      {/* ── student workspace ─────────────────────────────── */}
-      <Route path="/" element={S(<Dashboard />, student)} />
-      <Route path="/courses" element={S(<Catalog />, student)} />
-      <Route path="/courses/:id" element={S(<CourseDetails />, student)} />
-      <Route path="/my-learning" element={S(<MyLearning />, student)} />
-      <Route path="/my-courses" element={<Navigate to="/my-learning" replace />} />
-      <Route path="/learn/:courseId/:lessonId" element={S(<LessonPlayer />, student)} />
-      <Route path="/assignments" element={S(<StudentAssignments />, student)} />
-      <Route path="/assignments/:id" element={S(<AssessmentDetail />, student)} />
-      <Route path="/progress" element={S(<ProgressPage />, student)} />
-      <Route path="/doubts" element={S(<StudentDoubts />, student)} />
+        {/* ── student workspace ─────────────────────────────── */}
+        <Route path="/" element={S(<Dashboard />, student)} />
+        <Route path="/courses" element={S(<Catalog />, student)} />
+        <Route path="/courses/:id" element={S(<CourseDetails />, student)} />
+        <Route path="/my-learning" element={S(<MyLearning />, student)} />
+        <Route path="/my-courses" element={<Navigate to="/my-learning" replace />} />
+        <Route path="/learn/:courseId/:lessonId" element={S(<LessonPlayer />, student)} />
+        <Route path="/assignments" element={S(<StudentAssignments />, student)} />
+        <Route path="/assignments/:id" element={S(<AssessmentDetail />, student)} />
+        <Route path="/progress" element={S(<ProgressPage />, student)} />
+        <Route path="/doubts" element={S(<StudentDoubts />, student)} />
 
-      {/* ── teacher / admin workspace ─────────────────────── */}
-      <Route path="/teach" element={S(<TeacherDashboard />, staff)} />
-      <Route path="/manage" element={S(<ManageCourses />, staff)} />
-      <Route path="/manage/courses/new" element={S(<CourseEditor />, staff)} />
-      <Route path="/manage/courses/:id" element={S(<CourseEditor />, staff)} />
-      <Route path="/manage/courses/:id/enrollments" element={S(<CourseEnrollments />, staff)} />
-      <Route path="/teach/assignments" element={S(<TeacherAssignments />, staff)} />
-      <Route path="/teach/students" element={S(<TeacherStudents />, staff)} />
-      <Route path="/teach/doubts" element={S(<TeacherDoubts />, staff)} />
-      <Route path="/teach/performance" element={S(<TeacherPerformance />, staff)} />
+        {/* ── teacher / admin workspace ─────────────────────── */}
+        <Route path="/teach" element={S(<TeacherDashboard />, staff)} />
+        <Route path="/manage" element={S(<ManageCourses />, staff)} />
+        <Route path="/manage/courses/new" element={S(<CourseEditor />, staff)} />
+        <Route path="/manage/courses/:id" element={S(<CourseEditor />, staff)} />
+        <Route path="/manage/courses/:id/enrollments" element={S(<CourseEnrollments />, staff)} />
+        <Route path="/teach/assignments" element={S(<TeacherAssignments />, staff)} />
+        <Route path="/teach/students" element={S(<TeacherStudents />, staff)} />
+        <Route path="/teach/doubts" element={S(<TeacherDoubts />, staff)} />
+        <Route path="/teach/performance" element={S(<TeacherPerformance />, staff)} />
 
-      {/* ── admin only ────────────────────────────────────── */}
-      <Route path="/admin/users" element={S(<AdminUsers />, ["admin"])} />
+        {/* ── admin only ────────────────────────────────────── */}
+        <Route path="/admin/users" element={S(<AdminUsers />, ["admin"])} />
 
-      {/* ── shared ────────────────────────────────────────── */}
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        {/* ── shared ────────────────────────────────────────── */}
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-      <Route path="*" element={user ? <NotFound /> : <Navigate to={home} replace />} />
-    </Routes>
+        <Route path="*" element={user ? <NotFound /> : <Navigate to={home} replace />} />
+      </Routes>
+    </>
   );
 }

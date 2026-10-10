@@ -126,7 +126,7 @@ export default function CourseDetails() {
   if (!data)
     return (
       <Layout>
-        <CenterLoader />
+        <CenterLoader variant="detail" />
       </Layout>
     );
 
@@ -138,6 +138,9 @@ export default function CourseDetails() {
     (resumeLessonId && lessons.some((l) => l._id === resumeLessonId) && resumeLessonId) ||
     firstLesson?._id ||
     null;
+  const resumeHref = resumeTarget ? `/learn/${course._id}/${resumeTarget}` : "/my-learning";
+  const resumeLabel =
+    resumeLessonId && resumeLessonId !== firstLesson?._id ? "Resume course" : "Start learning";
   // Real lesson minutes are the truth; `hours` is only the teacher's estimate
   // while a course is still being built, so show it only when there's no content yet.
   const totalTime = course.minutes
@@ -147,14 +150,14 @@ export default function CourseDetails() {
     : "";
 
   return (
-    <Layout>
-      <Link className="back" to="/courses" style={{ marginBottom: 14 }}>
+    <Layout bodyClass="has-cta-bar">
+      <Link className="page-back" to="/courses">
         <ArrowLeft />
-        Browse Courses
+        Back to courses
       </Link>
       <div className="split">
         <div>
-          <CourseThumb src={course.thumbnailUrl} height={200} style={{ marginBottom: 14 }} />
+          <CourseThumb src={course.thumbnailUrl} style={{ marginBottom: 14 }} />
 
           <div className="row" style={{ gap: 8, marginBottom: 6 }}>
             {course.category && <span className="tag tag-neutral">{course.category}</span>}
@@ -293,15 +296,12 @@ export default function CourseDetails() {
         </div>
 
         {/* ── sticky enrol box ──────────────────────────────────── */}
-        <div className="card elev-md" style={{ height: "fit-content", position: "sticky", top: 16 }}>
+        <div className="card elev-md enrol-box">
           <div style={{ fontSize: 28, fontFamily: "var(--font-heading)", fontWeight: 800 }}>Free</div>
           {owned ? (
-            <Link
-              className="btn btn-secondary btn-block"
-              style={{ justifyContent: "center" }}
-              to={resumeTarget ? `/learn/${course._id}/${resumeTarget}` : "/my-learning"}
-            >
-              {resumeLessonId && resumeLessonId !== firstLesson?._id ? "Resume Course" : "Go to Course"}
+            <Link className="btn btn-primary btn-block" to={resumeHref}>
+              <Play />
+              {resumeLabel}
             </Link>
           ) : (
             <>
@@ -340,6 +340,27 @@ export default function CourseDetails() {
             Lifetime access
           </div>
         </div>
+      </div>
+
+      {/* Phones only: the enrol box above lands below every review on a
+          narrow screen, so the main action rides along at the bottom. */}
+      <div className="cta-bar">
+        <div className="cta-bar-text">
+          <strong>Free</strong>
+          <span>
+            {course.lessonCount} lessons{totalTime ? ` · ${totalTime}` : ""}
+          </span>
+        </div>
+        {owned ? (
+          <Link className="btn btn-primary" to={resumeHref}>
+            <Play />
+            {resumeLabel}
+          </Link>
+        ) : (
+          <button className={"btn btn-primary" + (busy ? " is-loading" : "")} onClick={enroll}>
+            Enroll Free
+          </button>
+        )}
       </div>
 
       {previewOpen && firstLesson && (

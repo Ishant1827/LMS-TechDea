@@ -308,30 +308,18 @@
 }
 .done-banner svg { width: 20px; height: 20px; flex: none; }
 
-/* course editor: curriculum (left/main) + details & status (right on desktop,
-   first on mobile — DOM order is details-then-curriculum) */
+/* course editor: step 1 details & status (left on desktop, top on one
+   column), then step 2 the curriculum — plain DOM order, no reordering */
 .editor-split {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
   gap: 24px;
   align-items: start;
 }
-.editor-split .col-curriculum { order: 1; }
-.editor-split .col-details { order: 2; }
 
-.status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  padding: 5px 0;
-  color: var(--color-muted);
-}
-.status-row strong { color: var(--color-text); font-weight: 750; }
 
 @media (max-width: 980px) {
   .editor-split { grid-template-columns: 1fr; }
-  .editor-split > * { order: 0; }
 }
 
 /* draft lesson row */
@@ -416,62 +404,6 @@
   gap: 24px;
   align-items: start;
 }
-/* ── dashboard: "My Learning" as a course card grid ──────────────────────
-   Course cards mirror the discover strip's tile language instead of a plain
-   list, so progress and the discover section read as one visual family. A
-   finished course spans both columns — its content is a single line, not
-   worth a whole tile of its own. */
-.learn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.learn-card { padding: 10px; gap: 8px; }
-.learn-card .lc-title {
-  font-size: 12.5px; font-weight: 700;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.learn-card .lc-progress { display: flex; align-items: center; gap: 7px; }
-.learn-card .lc-progress .pbar { flex: 1; }
-.learn-card .lc-pct { font-size: 10.5px; font-weight: 800; color: var(--color-muted); flex: none; }
-.learn-card.is-done {
-  grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; padding: 12px 14px;
-}
-.learn-card .lc-done-ic {
-  width: 32px; height: 32px; border-radius: 10px; flex: none;
-  display: grid; place-items: center; background: #e2f3ec; color: var(--color-success);
-}
-.learn-card .lc-done-ic svg { width: 16px; height: 16px; }
-@media (max-width: 520px) { .learn-grid { grid-template-columns: 1fr; } }
-
-/* ── dashboard: tabbed activity card (doubts / due soon) ─────────────────
-   These used to be two stacked panels — a list, then a second header, then
-   a second list, often with one side mostly empty. One card with a tab
-   switcher keeps the same information one tap away without the imbalance. */
-.activity-card { padding: 10px; gap: 0; }
-.activity-card .seg { width: 100%; }
-.activity-card .seg-opt { flex: 1; justify-content: center; }
-.activity-list { margin-top: 8px; }
-.activity-empty { padding: 8px 6px; margin: 0; }
-.activity-row {
-  display: block; padding: 9px 10px; border-radius: 10px;
-  text-decoration: none; color: var(--color-text);
-}
-.activity-row:hover { background: var(--color-soft); }
-.activity-row--static { display: flex; align-items: center; gap: 8px; cursor: default; }
-.activity-more { display: block; padding: 6px 10px 2px; }
-
-/* horizontal scroller (discover strip) */
-.hscroll {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scroll-snap-type: x proximity;
-}
-.hscroll > * { scroll-snap-align: start; }
-.mini-course {
-  width: 210px;
-  flex: none;
-  gap: 6px;
-}
-
 @media (max-width: 900px) {
   .stat-strip { grid-template-columns: repeat(2, 1fr); }
   .dash-grid { grid-template-columns: 1fr; }
@@ -957,73 +889,6 @@
 }
 .ring-sub { font-size: 11.5px; font-weight: 600; color: var(--color-muted); }
 @media (prefers-reduced-motion: reduce) { .ring-fill { transition: none; } }
-
-/* ── dashboard: greeting + section headings ─────────────────────────────── */
-.dash-head {
-  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-.dash-head-text { flex: 1; min-width: 200px; }
-.dash-head h2 { margin: 0 0 3px; }
-.dash-head .sub { color: var(--color-muted); font-size: 13.5px; margin: 0; }
-.sec-head {
-  display: flex; align-items: center; gap: 8px; margin: 22px 0 10px;
-}
-.sec-head:first-child { margin-top: 0; }
-.sec-head h4 { margin: 0; font-size: 15px; }
-.sec-head svg { width: 15px; height: 15px; color: var(--color-accent); flex: none; }
-.sec-head .sec-link { margin-left: auto; font-size: 12px; color: var(--color-muted); text-decoration: none; font-weight: 600; }
-.sec-head .sec-link:hover { color: var(--color-accent); }
-
-/* ── dashboard: "jump to" tiles (teacher) ───────────────────────────────── */
-.jump-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.jump-tile {
-  display: flex; flex-direction: row; gap: 9px; align-items: center;
-  padding: 11px 12px; text-decoration: none; color: var(--color-text);
-}
-.jump-tile b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.jump-tile .ji {
-  width: 30px; height: 30px; border-radius: 10px; flex: none; display: grid; place-items: center;
-  background: var(--color-accent-100); color: var(--color-accent);
-}
-.jump-tile .ji svg { width: 16px; height: 16px; }
-.jump-tile b { font-size: 13px; font-weight: 700; }
-@media (max-width: 400px) { .jump-grid { grid-template-columns: 1fr; } }
-
-/* ── dashboard: one bordered card holding several rows ───────────────────
-   Doubts and attention items used to each be their own elevated card — a
-   wall of identical white boxes with a gap between every one. One card per
-   list, a hover tint per row, reads as a single list instead of a stack. */
-.list-card { padding: 6px; gap: 0; }
-
-/* ── dashboard: attention rows ──────────────────────────────────────────── */
-.attn-row {
-  display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px;
-  text-decoration: none; color: var(--color-text); border-radius: 10px; transition: background .15s;
-  border-left: 3px solid var(--tone-fg, var(--color-neutral-400));
-}
-.attn-row:hover { background: var(--color-soft); }
-.attn-row .ai { width: 30px; height: 30px; border-radius: 10px; flex: none;
-  display: grid; place-items: center; background: var(--tone-bg); color: var(--tone-fg); }
-.attn-row .ai svg { width: 15px; height: 15px; }
-.attn-row .at { flex: 1; min-width: 0; }
-.attn-row .at b { display: block; font-size: 13px; font-weight: 700; }
-.attn-row .at span { font-size: 11.5px; color: var(--color-muted); }
-
-/* ── dashboard: doubt rows with an initials avatar ──────────────────────── */
-.doubt-row { display: flex; flex-direction: row; gap: 10px; padding: 10px 12px;
-  text-decoration: none; color: var(--color-text); align-items: flex-start;
-  border-radius: 10px; transition: background .15s; }
-.doubt-row:hover { background: var(--color-soft); }
-.doubt-row .avatar { flex: none; }
-.doubt-row .avatar { width: 30px; height: 30px; font-size: 11px; }
-.doubt-row .dr-body { flex: 1; min-width: 0; }
-.doubt-row .dr-meta { display: flex; align-items: center; gap: 6px; }
-.doubt-row .dr-meta .who { font-size: 12px; font-weight: 700; }
-.doubt-row .dr-meta .where { font-size: 11.5px; color: var(--color-muted);
-  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doubt-row .dr-text { font-size: 13px; margin-top: 3px; display: -webkit-box;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* friendly empty state used on the dashboards */
 .quiet-note {
