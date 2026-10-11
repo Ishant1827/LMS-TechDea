@@ -7,8 +7,10 @@ import { shortDate, DOUBT_STATUS_TAG } from "@/shared/lib/format";
 
 
 export default function StudentDoubts() {
-  const { status, data: doubts, error, reload } = useLoad(() =>
-    api.get("/doubts/mine").then((r) => r.data.doubts)
+  const { status, data: doubts, error, reload } = useLoad(
+    () => api.get("/doubts/mine").then((r) => r.data.doubts),
+    [],
+    { key: "student:doubts" }
   );
 
   if (status === "loading")

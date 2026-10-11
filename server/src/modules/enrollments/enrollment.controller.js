@@ -76,15 +76,21 @@ exports.enroll = asyncHandler(async (req, res) => {
 
 // GET /api/enrollments/mine
 exports.mine = asyncHandler(async (req, res) => {
-  const enrolls = await Enrollment.find({ student: req.user._id }).populate("course").lean();
-  const active = enrolls.filter((e) => e.course); // drop enrollments whose course was deleted
-
-  const lessons = await Lesson.find({
-    course: { $in: active.map((e) => e.course._id) },
-    published: { $ne: false },
-  })
-    .sort({ order: 1, createdAt: 1 })
-    .lean();
+  // Enrolments first (they name the courses), then the courses and their
+  // lessons side by side — two round trips, where populate-then-find was three.
+  const enrolls = await Enrollment.find({ student: req.user._id }).lean();
+  const courseIds = enrolls.map((e) => e.course);
+  const [courses, lessons] = await Promise.all([
+    Course.find({ _id: { $in: courseIds } }).lean(),
+    Lesson.find({ course: { $in: courseIds }, published: { $ne: false } })
+      .sort({ order: 1, createdAt: 1 })
+      .lean(),
+  ]);
+  const courseById = new Map(courses.map((c) => [String(c._id), c]));
+  // drop enrolments whose course was deleted
+  const active = enrolls
+    .map((e) => ({ ...e, course: courseById.get(String(e.course)) }))
+    .filter((e) => e.course);
   const byCourse = {};
   for (const l of lessons) (byCourse[String(l.course)] ||= []).push(l);
 

@@ -941,3 +941,17 @@ a.thread:hover { border-color: var(--color-accent-300); }
 .tag-danger { background: #fdecec; color: #b42318; }
 
 @media (prefers-reduced-motion: reduce) { .upnext-play { transition: none; } }
+
+/* Suspense fallback while a page's code downloads (rare — pages are prefetched) */
+.route-loading { min-height: 100dvh; background: var(--color-bg); }
+
+/* "the server is waking up" — shown on loads that pass six seconds */
+.slow-note {
+  display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 0 16px;
+  padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+  background: #fdf8ee; border: 1px solid #f3e0bb; color: #7a4d00;
+  animation: td-rise 0.25s ease both;
+}
+.slow-note .spinner { width: 16px; height: 16px; }
+.loader-screen--boot .slow-note { margin: 0 16px; }
+@media (prefers-reduced-motion: reduce) { .slow-note { animation: none; } }

@@ -10,7 +10,8 @@
    The component layer keeps the class names the prototype's markup already
    uses (.btn, .card, .tag, .table, .input, …) so only the styling changes.
    ════════════════════════════════════════════════════════════════════════════ */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+/* Inter is loaded from index.html (preconnect + stylesheet link), not an
+   @import here — an @import is only discovered after this file downloads. */
 
 :root {
   /* brand + surface */

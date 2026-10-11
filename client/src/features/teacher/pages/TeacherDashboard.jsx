@@ -20,10 +20,10 @@ export default function TeacherDashboard() {
   const [allQueue, setAllQueue] = useState(false);
   // Courses gate the page; the rest fill panels and fail on their own so one
   // dead endpoint doesn't blank a dashboard that is otherwise fine.
-  const courseLoad = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
-  const doubtLoad = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts));
-  const studentLoad = useLoad(() => api.get("/students").then((r) => r.data.students));
-  const gradingLoad = useLoad(() => api.get("/submissions/pending").then((r) => r.data));
+  const courseLoad = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses), [], { key: "tdash:courses" });
+  const doubtLoad = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts), [], { key: "tdash:doubts" });
+  const studentLoad = useLoad(() => api.get("/students").then((r) => r.data.students), [], { key: "tdash:students" });
+  const gradingLoad = useLoad(() => api.get("/submissions/pending").then((r) => r.data), [], { key: "tdash:grading" });
 
   const courses = courseLoad.data;
   const doubts = doubtLoad.data || [];

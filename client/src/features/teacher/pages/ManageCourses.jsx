@@ -23,7 +23,9 @@ export default function ManageCourses() {
     error,
     reload,
     setData: setList,
-  } = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses));
+  } = useLoad(() => api.get("/courses/manage").then((r) => r.data.courses), [], {
+    key: "manage:courses",
+  });
 
   const togglePublish = async (c) => {
     try {

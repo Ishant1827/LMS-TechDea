@@ -15,6 +15,22 @@ function useShowAfter(ms = SHOW_AFTER_MS) {
   return show;
 }
 
+// On the free hosting plan the server sleeps when nobody has used it for a
+// while and takes up to a minute to wake. A skeleton that just keeps pulsing
+// looks broken after a few seconds, so say what's going on.
+const SLOW_AFTER_MS = 6000;
+function SlowNote() {
+  const slow = useShowAfter(SLOW_AFTER_MS);
+  if (!slow) return null;
+  return (
+    <p className="slow-note" role="status">
+      <span className="spinner" aria-hidden="true" />
+      Taking longer than usual — if nobody has used TechDea for a while, the server needs up to a
+      minute to wake up.
+    </p>
+  );
+}
+
 // Full-screen splash — now only for the rare boot with no remembered session
 // to draw the app frame from. It carries the brand rather than a bare spinner.
 export function BootLoader({ label = "Loading…" }) {
@@ -28,6 +44,7 @@ export function BootLoader({ label = "Loading…" }) {
       <div className="loader-block">
         <span className="spinner" /> <span>{label}</span>
       </div>
+      <SlowNote />
     </div>
   );
 }
@@ -187,6 +204,7 @@ export function CenterLoader({ variant = "list", label = "Loading…" }) {
   return (
     <div className="sk-page" role="status" aria-live="polite" aria-busy="true">
       <span className="sr-only">{label}</span>
+      <SlowNote />
       {show && <Shape />}
     </div>
   );

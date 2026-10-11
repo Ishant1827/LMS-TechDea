@@ -4,8 +4,10 @@ import { Bar, CenterLoader, ErrorState, CountUp } from "@/shared/components/ui";
 import { useLoad } from "@/shared/hooks/useLoad";
 
 export default function ProgressPage() {
-  const { status, data: list, error, reload } = useLoad(() =>
-    api.get("/enrollments/mine").then((r) => r.data.enrollments)
+  const { status, data: list, error, reload } = useLoad(
+    () => api.get("/enrollments/mine").then((r) => r.data.enrollments),
+    [],
+    { key: "progress:enrollments" }
   );
 
   if (status === "loading")

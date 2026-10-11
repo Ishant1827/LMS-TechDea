@@ -59,7 +59,8 @@ export default function Catalog() {
       api
         .get("/courses", { params: { q: query, category, difficulty, sort, page, limit: 12 } })
         .then((r) => r.data),
-    [query, category, difficulty, sort, page]
+    [query, category, difficulty, sort, page],
+    { key: `catalog:${query}|${category}|${difficulty}|${sort}|${page}` }
   );
 
   const enroll = async (id) => {

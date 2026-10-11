@@ -72,7 +72,9 @@ export default function TeacherDoubts() {
     error,
     reload,
     setData: setDoubts,
-  } = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts));
+  } = useLoad(() => api.get("/doubts/teaching").then((r) => r.data.doubts), [], {
+    key: "teach:doubts",
+  });
 
   const save = async (id, patch) => {
     try {
