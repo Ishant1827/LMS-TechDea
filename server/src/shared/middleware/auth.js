@@ -23,6 +23,11 @@ const wayThrough = (req) =>
 // `jti`; they cannot be listed, and simply run out within JWT_EXPIRES.
 const isRevoked = async (payload) => !!payload.jti && !!(await RevokedToken.exists({ jti: payload.jti }));
 
+// The account and the revocation check, fetched together. They don't depend on
+// each other, and each is a round trip to the database — done one after the
+// other they doubled the cost of signing in every single request.
+const loadSession = (payload) => Promise.all([User.findById(payload.id), isRevoked(payload)]);
+
 // Require a valid token. Populates req.user, and req.token with the verified
 // claims (logout needs its id and expiry).
 async function protect(req, res, next) {
@@ -30,7 +35,7 @@ async function protect(req, res, next) {
     const token = readToken(req);
     if (!token) return res.status(401).json({ message: "Please sign in" });
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(payload.id);
+    const [user, revoked] = await loadSession(payload);
     if (!user || !user.active) return res.status(401).json({ message: "Account not available" });
 
     // Issued before the account's sessions were last invalidated — a password
@@ -42,7 +47,7 @@ async function protect(req, res, next) {
     if ((payload.tv ?? 0) !== (user.tokenVersion || 0)) {
       return res.status(401).json({ message: "Your session has ended — sign in again" });
     }
-    if (await isRevoked(payload)) {
+    if (revoked) {
       return res.status(401).json({ message: "You signed out of this session — sign in again" });
     }
 
@@ -71,10 +76,10 @@ async function optionalAuth(req, res, next) {
     const token = readToken(req);
     if (token) {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(payload.id);
+      const [user, revoked] = await loadSession(payload);
       // Same check as protect. A revoked token must not quietly grant the
       // signed-in view of a public page either.
-      if (user && user.active && (payload.tv ?? 0) === (user.tokenVersion || 0) && !(await isRevoked(payload))) {
+      if (user && user.active && (payload.tv ?? 0) === (user.tokenVersion || 0) && !revoked) {
         req.user = user;
       }
     }

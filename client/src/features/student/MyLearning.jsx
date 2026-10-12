@@ -22,7 +22,9 @@ export default function MyLearning() {
         const bd = b.percent >= 100 ? 1 : 0;
         return ad !== bd ? ad - bd : b.percent - a.percent;
       })
-    )
+    ),
+    [],
+    { key: "my-learning" }
   );
 
   const leave = async (e) => {

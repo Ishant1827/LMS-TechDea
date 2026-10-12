@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api, { AUTH_EXPIRED } from "@/shared/api/client";
+import { clearLoadCache } from "@/shared/hooks/useLoad";
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -51,7 +52,11 @@ export function AuthProvider({ children }) {
   const [bootError, setBootError] = useState(null); // couldn't verify the session
 
   const setUser = useCallback((u) => {
-    setUserState(u);
+    // a different person (or nobody) — drop every remembered page
+    setUserState((prev) => {
+      if (!u || !prev || String(prev._id) !== String(u._id)) clearLoadCache();
+      return u;
+    });
     cacheUser(u);
   }, []);
 

@@ -60,7 +60,7 @@ export default function AdminUsers() {
     if (roleFilter) params.role = roleFilter;
     if (query) params.q = query;
     return api.get("/users", { params }).then((r) => r.data.users);
-  }, [roleFilter, query]);
+  }, [roleFilter, query], { key: `users:${roleFilter}|${query}` });
 
   const create = async (e) => {
     e.preventDefault();

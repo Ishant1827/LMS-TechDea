@@ -20,8 +20,10 @@ const TABS = ["todo", "submitted", "graded", "all"];
 
 export default function StudentAssignments() {
   const [tab, setTab] = useState("todo");
-  const { status, data: items, error, reload } = useLoad(() =>
-    api.get("/assessments/mine").then((r) => r.data.assessments)
+  const { status, data: items, error, reload } = useLoad(
+    () => api.get("/assessments/mine").then((r) => r.data.assessments),
+    [],
+    { key: "student:assessments" }
   );
 
   const { counts, avg } = useMemo(() => {

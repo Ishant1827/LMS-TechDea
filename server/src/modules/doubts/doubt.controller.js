@@ -47,19 +47,23 @@ exports.mine = asyncHandler(async (req, res) => {
 
 // GET /api/doubts/teaching?status=&courseId=   (teacher/admin — doubts on your courses)
 exports.teaching = asyncHandler(async (req, res) => {
-  const courseFilter = req.user.role === "admin" ? {} : { owner: req.user._id };
-  const myCourseIds = await Course.find(courseFilter).distinct("_id");
+  // An admin manages every course, so looking the course ids up first was a
+  // round trip that couldn't narrow anything; for them the filter starts open
+  // and doubts on deleted courses are dropped after populate instead.
+  const isAdmin = req.user.role === "admin";
+  const myCourseIds = isAdmin ? null : await Course.find({ owner: req.user._id }).distinct("_id");
 
-  const filter = { course: { $in: myCourseIds } };
+  const filter = isAdmin ? {} : { course: { $in: myCourseIds } };
   if (DOUBT_STATUS.includes(req.query.status)) filter.status = req.query.status;
   // Narrow within the courses you manage — never widen past them.
   if (req.query.courseId) {
     const asked = String(req.query.courseId);
-    if (!myCourseIds.some((id) => String(id) === asked)) return res.json({ doubts: [] });
+    if (!/^[a-f0-9]{24}$/i.test(asked)) return res.json({ doubts: [] });
+    if (!isAdmin && !myCourseIds.some((id) => String(id) === asked)) return res.json({ doubts: [] });
     filter.course = asked;
   }
 
-  const doubts = await populated(Doubt.find(filter)).lean();
+  const doubts = (await populated(Doubt.find(filter)).lean()).filter((d) => d.course);
   doubts.sort(byOpenThenNew);
   res.json({ doubts });
 });

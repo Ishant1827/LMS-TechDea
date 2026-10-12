@@ -19,10 +19,12 @@ export default function Dashboard() {
   const { user } = useAuth();
   // Enrolments gate the page — everything below is derived from them. The
   // others fill their own panels and report their own failure.
-  const enrLoad = useLoad(() => api.get("/enrollments/mine").then((r) => r.data.enrollments));
-  const doubtLoad = useLoad(() => api.get("/doubts/mine").then((r) => r.data.doubts));
+  const enrLoad = useLoad(() => api.get("/enrollments/mine").then((r) => r.data.enrollments), [], { key: "dash:enrollments" });
+  const doubtLoad = useLoad(() => api.get("/doubts/mine").then((r) => r.data.doubts), [], { key: "dash:doubts" });
   const discoverLoad = useLoad(() =>
-    api.get("/courses", { params: { sort: "rating", limit: 8 } }).then((r) => r.data.courses)
+    api.get("/courses", { params: { sort: "rating", limit: 8 } }).then((r) => r.data.courses),
+    [],
+    { key: "dash:discover" }
   );
   // unsubmitted work with a deadline, soonest first
   const dueLoad = useLoad(() =>
@@ -30,7 +32,9 @@ export default function Dashboard() {
       r.data.assessments
         .filter((a) => !a.submission && a.dueAt)
         .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))
-    )
+    ),
+    [],
+    { key: "dash:due" }
   );
 
   if (enrLoad.status === "loading")

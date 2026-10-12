@@ -37,7 +37,7 @@ export default function TeacherStudents() {
     if (query) params.q = query;
     if (filter !== "all") params.filter = filter;
     return api.get("/students", { params }).then((r) => r.data);
-  }, [query, filter]);
+  }, [query, filter], { key: `students:${query}|${filter}` });
 
   // Only the first load blanks the page; a re-search keeps the previous rows
   // on screen, which is how this behaved before.

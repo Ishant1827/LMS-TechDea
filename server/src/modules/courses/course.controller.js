@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Course = require("./Course.model");
 const Lesson = require("../lessons/Lesson.model");
 const Enrollment = require("../enrollments/Enrollment.model");
@@ -61,13 +62,18 @@ exports.listPublished = asyncHandler(async (req, res) => {
   };
   const mongoSort = sortMap[req.query.sort] || { createdAt: -1 };
 
-  const total = await Course.countDocuments(filter);
-
-  // pull the filtered set, then enrich; for minute/rating sorts we sort in memory
-  let courses = await Course.find(filter).sort(mongoSort).lean();
+  // Pull the whole filtered set, then enrich; minute/rating sorts happen in
+  // memory and pagination is a slice, so the total is just its length — a
+  // separate countDocuments was one more round trip for a number we already
+  // had. The category list doesn't depend on the set, so it rides along.
+  let [courses, allCategories] = await Promise.all([
+    Course.find(filter).sort(mongoSort).lean(),
+    Course.distinct("category", { published: true, category: { $ne: "" } }),
+  ]);
+  const total = courses.length;
 
   const ids = courses.map((c) => c._id);
-  const [lessons, ratingAgg, allCategories] = await Promise.all([
+  const [lessons, ratingAgg] = await Promise.all([
     Lesson.find({ course: { $in: ids }, published: { $ne: false } })
       .select("course module durationMin")
       .lean(),
@@ -75,7 +81,6 @@ exports.listPublished = asyncHandler(async (req, res) => {
       { $match: { course: { $in: ids } } },
       { $group: { _id: "$course", avg: { $avg: "$rating" }, count: { $sum: 1 } } },
     ]),
-    Course.distinct("category", { published: true, category: { $ne: "" } }),
   ]);
 
   const byCourse = {};
@@ -134,24 +139,30 @@ exports.listManaged = asyncHandler(async (req, res) => {
 
 // GET /api/courses/:id  — detail + lessons (optionalAuth: managers can see unpublished)
 exports.getOne = asyncHandler(async (req, res) => {
-  const course = await Course.findById(req.params.id).populate("owner", "name email").lean();
-  if (!course) return res.status(404).json({ message: "Course not found" });
+  // Same answer the CastError handler gives, before anything is queried
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Bad id in request" });
+  const id = new mongoose.Types.ObjectId(req.params.id);
 
-  const isManager =
-    req.user && (req.user.role === "admin" || String(course.owner._id) === String(req.user._id));
-  if (!course.published && !isManager) return res.status(404).json({ message: "Course not found" });
-
-  const lessonFilter = { course: course._id };
-  if (!isManager) lessonFilter.published = { $ne: false };
-
-  const [lessons, enrollmentCount, ratingAgg] = await Promise.all([
-    Lesson.find(lessonFilter).sort({ order: 1, createdAt: 1 }).lean(),
-    Enrollment.countDocuments({ course: course._id }),
+  // Everything here is keyed by the id in the URL, so it's fetched at once
+  // rather than waiting on the course first: one round trip instead of two.
+  // Lessons come back unfiltered and hidden ones are dropped below, before
+  // anything is sent, for anyone who can't manage the course.
+  const [course, allLessons, enrollmentCount, ratingAgg] = await Promise.all([
+    Course.findById(id).populate("owner", "name email").lean(),
+    Lesson.find({ course: id }).sort({ order: 1, createdAt: 1 }).lean(),
+    Enrollment.countDocuments({ course: id }),
     Review.aggregate([
-      { $match: { course: course._id } },
+      { $match: { course: id } },
       { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } },
     ]),
   ]);
+  if (!course) return res.status(404).json({ message: "Course not found" });
+
+  const isManager =
+    req.user && (req.user.role === "admin" || String(course.owner?._id) === String(req.user._id));
+  if (!course.published && !isManager) return res.status(404).json({ message: "Course not found" });
+
+  const lessons = isManager ? allLessons : allLessons.filter((l) => l.published !== false);
 
   res.json({
     course: {
