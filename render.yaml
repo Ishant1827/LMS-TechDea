@@ -5,7 +5,7 @@
 services:
   # ── API ────────────────────────────────────────────────────────────────
   - type: web
-    name: server-lms-xj9d
+    name: lms-techdea-x6ss
     runtime: node
     rootDir: server
     plan: free
@@ -46,7 +46,7 @@ services:
     headers:
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https:; connect-src 'self' https://server-lms-xj9d.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https:; connect-src 'self' https://lms-techdea-x6ss.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
@@ -61,4 +61,4 @@ services:
         value: DENY
     envVars:
       - key: VITE_API_URL       # MUST include the /api path
-        value: https://server-lms-xj9d.onrender.com/api
+        value: https://lms-techdea-x6ss.onrender.com/api
