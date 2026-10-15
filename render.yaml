@@ -24,7 +24,7 @@ services:
       - key: JWT_EXPIRES
         value: 7d
       - key: CLIENT_ORIGIN      # exact origin of the client, no trailing slash
-        value: https://lms-client-szuv.onrender.com
+        value: https://lms.techdea.in
 
   # ── Client ─────────────────────────────────────────────────────────────
   - type: web

@@ -37,3 +37,7 @@ Learn Techdea/
 
 # Local planning document, not part of the app
 LMS-Integration-Plan.pdf
+LMS-Integration-Schema.png
+
+# Local database backups (contain student data)
+backups/
