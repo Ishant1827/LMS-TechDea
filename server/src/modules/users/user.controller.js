@@ -3,11 +3,13 @@ const User = require("./User.model");
 const Course = require("../courses/Course.model");
 const Enrollment = require("../enrollments/Enrollment.model");
 const Submission = require("../submissions/Submission.model");
+const QuizAttempt = require("../assessments/QuizAttempt.model");
 const Doubt = require("../doubts/Doubt.model");
 const Review = require("../reviews/Review.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { ROLES } = require("../../shared/utils/constants");
 const { passwordProblem } = require("../../shared/utils/password");
+const { NAME_MIN, NAME_MAX, EMAIL, cleanText, nameProblem, emailProblem } = require("../../shared/utils/validate");
 
 // GET /api/users?role=&q=
 exports.list = asyncHandler(async (req, res) => {
@@ -35,16 +37,20 @@ exports.list = asyncHandler(async (req, res) => {
 
 // POST /api/users  { name, email, password, role }  — create teacher/admin
 exports.create = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { password, role } = req.body;
+  const name = cleanText(req.body.name);
+  const email = cleanText(req.body.email).toLowerCase();
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email and password are required" });
   }
+  const invalid = nameProblem(name) || emailProblem(email);
+  if (invalid) return res.status(400).json({ message: invalid });
   if (!ROLES.includes(role)) {
     return res.status(400).json({ message: "Role must be student, teacher or admin" });
   }
   const weak = passwordProblem(password, { name, email });
   if (weak) return res.status(400).json({ message: weak });
-  if (await User.findOne({ email: email.toLowerCase() })) {
+  if (await User.findOne({ email })) {
     return res.status(409).json({ message: "Email already in use" });
   }
   // The admin typed this password, so the owner has never chosen one — exactly
@@ -85,7 +91,12 @@ exports.setActive = asyncHandler(async (req, res) => {
   if (String(user._id) === String(req.user._id)) {
     return res.status(400).json({ message: "You can't deactivate yourself" });
   }
+  const wasActive = user.active;
   user.active = !!req.body.active;
+  // Deactivating ends every session. `protect` already refuses an inactive
+  // account, but without this a token taken before came back to life the
+  // moment the account was reactivated.
+  if (wasActive && !user.active) user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
   res.json({ user });
 });
@@ -107,6 +118,7 @@ async function removeUserAndTheirWork(user) {
   await Promise.all([
     Enrollment.deleteMany({ student: user._id }),
     Submission.deleteMany({ student: user._id }),
+    QuizAttempt.deleteMany({ student: user._id }),
     Doubt.deleteMany({ student: user._id }),
     Review.deleteMany({ student: user._id }),
   ]);
@@ -182,58 +194,35 @@ const crypto = require("crypto");
 // small instance. The client sends larger imports in chunks of 10.
 const MAX_PER_REQUEST = 20;
 
-const NAME_MIN = 2;
-const NAME_MAX = 80;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 // Admins are deliberately not creatable here. A stray value in a spreadsheet
 // column should not be able to mint an administrator; that stays a deliberate,
 // one-at-a-time act (A9).
 const BULK_ROLES = ["student", "teacher"];
 
-// Imported passwords are built from the person's own name plus two digits, at
-// the owner's request: memorable, sayable down a phone, and typable by someone
-// who has just been told it.
+// Imported passwords are two everyday words and three digits — "river-tiger-427"
+// — still easy to say down a phone and type after hearing it once.
 //
-// The digits matter more than they look. Without them there are four candidates
-// for a two-part name, which anyone knowing that name could try in seconds.
-// With them there are 400, and the sign-in limiter allows eight attempts per
-// fifteen minutes — so guessing goes from trivial to roughly half a day of
-// sustained effort against one account. Still not a secret, and still worth
-// changing soon — which is why the account must replace it on first sign-in.
-const BRAND = "techdea";
+// They used to be built from the person's own name plus two digits. That left
+// about 400 candidates for anyone who knew the name, and the first-sign-in
+// password change did not help: whoever guessed first got to choose the new
+// password and keep the account. Random words give 100 x 100 x 900 = 9 million
+// candidates, and the account must still replace it on first sign-in.
+const WORDS = [
+  "apple", "amber", "anchor", "arrow", "badge", "basket", "beach", "berry", "bird", "blue",
+  "bottle", "brick", "bridge", "cable", "camel", "candle", "carpet", "cedar", "chair", "cloud",
+  "clock", "coral", "cotton", "crane", "desert", "dolphin", "eagle", "earth", "ember", "falcon",
+  "feather", "forest", "fountain", "garden", "ginger", "glass", "green", "harbor", "hill", "honey",
+  "island", "jacket", "jungle", "kettle", "kite", "ladder", "lemon", "lily", "lotus", "mango",
+  "maple", "marble", "meadow", "melon", "mirror", "monsoon", "moon", "mountain", "nest", "ocean",
+  "olive", "orange", "orbit", "otter", "paper", "parrot", "pebble", "pepper", "pillow", "planet",
+  "pocket", "purple", "quartz", "rabbit", "rain", "river", "rocket", "saffron", "salt", "silver",
+  "sky", "spice", "spring", "star", "stone", "sugar", "summer", "sun", "tea", "tiger",
+  "tulip", "valley", "velvet", "violet", "wave", "willow", "window", "winter", "yellow", "zebra",
+];
 
-// Whitespace splits the name; anything that is not a letter or digit is dropped,
-// so a name that arrived as "Patel, Asha" does not produce a password with a
-// comma in it that nobody can retype.
-function nameParts(name) {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .map((p) => p.replace(/[^\p{L}\p{N}]/gu, ""))
-    .filter(Boolean);
-
-  if (parts.length <= 1) return parts;
-  // First and last, not first and second: "Ishant Kumar Srivastava" is known by
-  // the two ends, not the middle.
-  return [parts[0], parts[parts.length - 1]];
-}
-
-function generatePassword(name) {
-  const digits = String(crypto.randomInt(10, 100)); // always two
-
-  const parts = nameParts(name);
-  if (!parts.length) {
-    // Nothing usable in the name — a row of punctuation, say. Four digits here
-    // rather than two, because the name is carrying no entropy at all.
-    return `${BRAND}@${crypto.randomInt(1000, 10000)}`;
-  }
-
-  const candidates = parts.flatMap((part) => [
-    `${BRAND}@${part}${digits}`,
-    `${part}${digits}@${BRAND}`,
-  ]);
-  return candidates[crypto.randomInt(0, candidates.length)];
+function generatePassword() {
+  const word = () => WORDS[crypto.randomInt(0, WORDS.length)];
+  return `${word()}-${word()}-${crypto.randomInt(100, 1000)}`;
 }
 
 // Returns either a cleaned row or the reason it cannot be used. Deliberately
@@ -298,10 +287,10 @@ exports.bulkCreate = asyncHandler(async (req, res) => {
       skipped.push({ index: c.index, email: c.email, reason: "an account with that email already exists" });
       continue;
     }
-    const password = generatePassword(c.name);
-    // The password below is derived from their name and is therefore guessable
-    // by anyone who knows it. The account is held to a password change on first
-    // sign-in until they replace it with one only they know.
+    const password = generatePassword();
+    // The admin sees this password, so it is not yet one only the owner knows.
+    // The account is held to a password change on first sign-in until they
+    // replace it with one of their own.
     const user = new User({ name: c.name, email: c.email, role: c.role, mustChangePassword: true });
     await user.setPassword(password);
     // Left unverified: an address asserted by an admin has not been proved by
@@ -327,8 +316,10 @@ exports.bulkCreate = asyncHandler(async (req, res) => {
 // POST /api/users/bulk-action  { ids: [...], action: "activate" | "deactivate" | "delete" }
 //
 // The same rules the one-at-a-time endpoints apply, applied per row: you cannot
-// act on yourself, and a teacher who still owns courses cannot be deleted or
-// deactivated out from under them. A row that cannot be done is reported with a
+// act on yourself, and a teacher who still owns courses cannot be deleted (their
+// courses would be left with no owner). Deactivating them is allowed: the
+// courses stay up and an admin can still manage or reassign them. A row that
+// cannot be done is reported with a
 // reason rather than failing the batch — selecting twenty people and being told
 // only "409" would leave the admin guessing which one.
 
@@ -395,6 +386,7 @@ exports.bulkAction = asyncHandler(async (req, res) => {
       continue;
     }
     user.active = wanted;
+    if (!wanted) user.tokenVersion = (user.tokenVersion || 0) + 1; // same as setActive
     await user.save();
     done.push({ id, email: user.email });
   }

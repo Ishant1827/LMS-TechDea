@@ -22,6 +22,19 @@ const loginLimiter = rateLimit({
   handler: message("Too many sign-in attempts. Try again in about 15 minutes."),
 });
 
+// The same account from anywhere. The limiter above is per IP, so someone
+// rotating addresses could keep guessing one account; this caps the total.
+// Generous, because it also locks out the real owner while it is in force.
+const loginAccountLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  keyGenerator: (req) => `acct:${String(req.body?.email || "").toLowerCase().trim()}`,
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: message("Too many sign-in attempts for this account. Try again in an hour, or ask an admin."),
+});
+
 // Signup is cheap to automate and each one writes a user row.
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -83,6 +96,7 @@ const bulkActionLimiter = rateLimit({
 
 module.exports = {
   loginLimiter,
+  loginAccountLimiter,
   registerLimiter,
   passwordLimiter,
   adminPasswordLimiter,

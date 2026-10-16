@@ -1,10 +1,15 @@
 const router = require("express").Router();
 const c = require("./auth.controller");
 const { protect } = require("../../shared/middleware/auth");
-const { loginLimiter, registerLimiter, passwordLimiter } = require("../../shared/middleware/rateLimit");
+const {
+  loginLimiter,
+  loginAccountLimiter,
+  registerLimiter,
+  passwordLimiter,
+} = require("../../shared/middleware/rateLimit");
 
 router.post("/register", registerLimiter, c.register);
-router.post("/login", loginLimiter, c.login);
+router.post("/login", loginLimiter, loginAccountLimiter, c.login);
 router.post("/logout", protect, c.logout);
 router.get("/me", protect, c.me);
 router.put("/me", protect, c.updateMe);

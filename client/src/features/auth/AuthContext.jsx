@@ -13,6 +13,18 @@ const TOKEN_KEY = "techdea-token";
 const USER_KEY = "techdea-user";
 // Set at sign-in, read once by WelcomeScreen: { first: boolean }.
 export const WELCOME_KEY = "techdea-welcome";
+// Unsaved lesson-note drafts (LessonPlayer) and in-progress quiz picks
+// (AssessmentDetail). Both belong to whoever is signed in and go at sign-out.
+export const LOCAL_NOTE_PREFIX = "lms:note:";
+const QUIZ_ANSWERS_PREFIX = "quiz-answers:";
+const clearPersonalDrafts = () => {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith(LOCAL_NOTE_PREFIX)) localStorage.removeItem(k);
+    for (const k of Object.keys(sessionStorage)) if (k.startsWith(QUIZ_ANSWERS_PREFIX)) sessionStorage.removeItem(k);
+  } catch {
+    /* storage blocked — nothing was kept */
+  }
+};
 
 const readCachedUser = () => {
   try {
@@ -130,6 +142,7 @@ export function AuthProvider({ children }) {
   // is signed out on this device either way.
   const logout = () => {
     const token = localStorage.getItem(TOKEN_KEY);
+    clearPersonalDrafts();
     setToken(null);
     setUser(null);
     if (token) {

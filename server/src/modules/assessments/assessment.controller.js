@@ -1,4 +1,5 @@
 const Assessment = require("./Assessment.model");
+const QuizAttempt = require("./QuizAttempt.model");
 const Submission = require("../submissions/Submission.model");
 const Course = require("../courses/Course.model");
 const Enrollment = require("../enrollments/Enrollment.model");
@@ -38,6 +39,21 @@ const fmtIst = (d) => `${new Date(d).toLocaleString("en-IN", IST_FORMAT)} IST`;
 // the real deadline and the countdown ends there.
 const CLOCK_SKEW_MS = 60 * 1000;
 
+// A timed quiz runs on the server's clock (see QuizAttempt). The minute of
+// grace covers the trip from the browser's auto-submit to here on a slow
+// connection; it is not extra time, and the page's countdown ends without it.
+const TIME_LIMIT_GRACE_MS = 60 * 1000;
+
+const isTimed = (a) => a.kind === "quiz" && a.timeLimitMin > 0;
+
+// When this attempt's time runs out: the limit from when they started, cut
+// short by the due date if that comes first.
+function attemptEndsAt(a, attempt) {
+  const byLimit = new Date(attempt.startedAt).getTime() + a.timeLimitMin * 60 * 1000;
+  const end = a.dueAt ? Math.min(byLimit, new Date(a.dueAt).getTime()) : byLimit;
+  return new Date(end);
+}
+
 // Auto-grade a quiz attempt -> percentage 0..100.
 function gradeQuiz(questions, answers = []) {
   if (!questions.length) return 0;
@@ -74,6 +90,15 @@ function sanitizeQuestions(raw) {
       return { text, options, correctIndex };
     })
     .filter((q) => q.text && q.options.length >= 2);
+}
+
+// Same number of questions, each with the same number of options and the same
+// right answer — only the words may differ.
+function sameQuizShape(before, after) {
+  if (before.length !== after.length) return false;
+  return before.every(
+    (q, i) => q.options.length === after[i].options.length && q.correctIndex === after[i].correctIndex
+  );
 }
 
 // Load an assessment for a manager route, 404/403 as needed. Returns { assessment, course }.
@@ -170,8 +195,19 @@ exports.getOne = asyncHandler(async (req, res) => {
   const enrolled = await Enrollment.exists({ student: req.user._id, course: a.course });
   if (!a.published || !enrolled) return res.status(404).json({ message: "Assessment not found" });
 
-  const sub = await Submission.findOne({ assessment: a._id, student: req.user._id }).lean();
-  const reveal = a.kind === "quiz" && !!sub; // show the answer key only after they've attempted it
+  const [sub, attempt] = await Promise.all([
+    Submission.findOne({ assessment: a._id, student: req.user._id }).lean(),
+    isTimed(a) ? QuizAttempt.findOne({ assessment: a._id, student: req.user._id }).lean() : null,
+  ]);
+  // The answer key waits for the due date as well as the attempt. Shown on
+  // submit, the first student to finish could hand the answers to everyone
+  // still to take it. With no due date there is no moment when the whole class
+  // is done, so the key is never shown — the score still is.
+  const keyOpen = !!a.dueAt && Date.now() > new Date(a.dueAt).getTime();
+  const reveal = a.kind === "quiz" && !!sub && keyOpen;
+  // A timed quiz keeps its questions back until the clock is started — read
+  // them first and the time limit would only cover clicking the answers.
+  const needsStart = isTimed(a) && !sub && !attempt;
 
   res.json({
     assessment: {
@@ -183,12 +219,50 @@ exports.getOne = asyncHandler(async (req, res) => {
       points: a.points,
       passPercent: a.passPercent,
       timeLimitMin: a.timeLimitMin,
-      questions: shapeQuestions(a, reveal),
+      questions: needsStart ? [] : shapeQuestions(a, reveal),
       questionCount: (a.questions || []).length,
       course: { _id: course._id, title: course.title },
     },
     submission: shapeSubmission(sub, a),
+    answersShown: reveal,
+    needsStart,
+    attempt: attempt
+      ? { startedAt: attempt.startedAt, endsAt: attemptEndsAt(a, attempt), graceMs: TIME_LIMIT_GRACE_MS }
+      : null,
+    // the page counts down against this, not the student's own clock
+    serverNow: new Date(),
   });
+});
+
+// POST /api/assessments/:id/start  — start the clock on a timed quiz (student)
+//
+// Starting twice is not an error and does not reset anything: the first start
+// time is kept, which is the whole point.
+exports.start = asyncHandler(async (req, res) => {
+  const a = await Assessment.findById(req.params.id).lean();
+  if (!a || !a.published) return res.status(404).json({ message: "Assessment not found" });
+  if (!isTimed(a)) return res.status(400).json({ message: "This quiz has no time limit" });
+
+  const enrolled = await Enrollment.exists({ student: req.user._id, course: a.course });
+  if (!enrolled) return res.status(403).json({ message: "Enrol in the course first" });
+
+  const existing = await QuizAttempt.findOne({ assessment: a._id, student: req.user._id }).lean();
+  if (!existing) {
+    if (await Submission.exists({ assessment: a._id, student: req.user._id })) {
+      return res.status(409).json({ message: "You've already submitted this" });
+    }
+    if (a.dueAt && Date.now() > new Date(a.dueAt).getTime()) {
+      return res.status(400).json({ message: `This closed on ${fmtIst(a.dueAt)}.` });
+    }
+  }
+
+  const attempt = await QuizAttempt.findOneAndUpdate(
+    { assessment: a._id, student: req.user._id },
+    { $setOnInsert: { assessment: a._id, course: a.course, student: req.user._id, startedAt: new Date() } },
+    { upsert: true, new: true }
+  ).lean();
+
+  res.json({ attempt: { startedAt: attempt.startedAt, endsAt: attemptEndsAt(a, attempt) } });
 });
 
 // ── create / update / delete / publish (manager) ───────────────────────────
@@ -239,9 +313,41 @@ exports.update = asyncHandler(async (req, res) => {
   if (b.dueAt !== undefined) assessment.dueAt = parseDueAt(b.dueAt);
 
   if (assessment.kind === "assignment") {
-    if (b.points !== undefined) assessment.points = Math.min(1000, Math.max(1, Number(b.points) || 100));
+    if (b.points !== undefined) {
+      const points = Math.min(1000, Math.max(1, Number(b.points) || 100));
+      // Marks already given are out of the old total. Dropping the total below
+      // one of them would turn 80/100 into 160%.
+      if (points < assessment.points) {
+        const top = await Submission.findOne({ assessment: assessment._id, score: { $ne: null } })
+          .sort({ score: -1 })
+          .select("score")
+          .lean();
+        if (top && top.score > points) {
+          return res.status(400).json({
+            message: `Some work is already marked ${top.score} — the total can't go below that.`,
+          });
+        }
+      }
+      assessment.points = points;
+    }
   } else {
-    if (b.questions !== undefined) assessment.questions = sanitizeQuestions(b.questions);
+    if (b.questions !== undefined) {
+      const next = sanitizeQuestions(b.questions);
+      // Once someone has taken the quiz their answers are positions in these
+      // questions, and their score was worked out from this key. Fixing the
+      // wording is fine; adding, removing or reordering questions or options,
+      // or moving the right answer, would make their results mean something else.
+      if (!sameQuizShape(assessment.questions, next)) {
+        const taken = await Submission.exists({ assessment: assessment._id });
+        if (taken) {
+          return res.status(400).json({
+            message:
+              "Students have already taken this quiz, so questions and answers can't be added, removed or changed. You can still fix the wording.",
+          });
+        }
+      }
+      assessment.questions = next;
+    }
     if (b.passPercent !== undefined)
       assessment.passPercent = Math.min(100, Math.max(0, Number(b.passPercent) || 60));
     if (b.timeLimitMin !== undefined)
@@ -279,6 +385,7 @@ exports.remove = asyncHandler(async (req, res) => {
 
   await Promise.all([
     Submission.deleteMany({ assessment: assessment._id }),
+    QuizAttempt.deleteMany({ assessment: assessment._id }),
     assessment.deleteOne(),
   ]);
   res.json({ message: "Assessment deleted" });
@@ -311,6 +418,17 @@ exports.submit = asyncHandler(async (req, res) => {
     return res.status(400).json({
       message: `This closed on ${fmtIst(a.dueAt)}. Ask your teacher to extend the due date.`,
     });
+  }
+
+  // A timed quiz is held to the clock the server started, not the page's.
+  // A refresh no longer buys a fresh countdown, and answers that arrive after
+  // the time ran out (plus the grace for the trip here) are refused.
+  if (isTimed(a)) {
+    const attempt = await QuizAttempt.findOne({ assessment: a._id, student: req.user._id }).lean();
+    if (!attempt) return res.status(400).json({ message: "Start the quiz first" });
+    if (Date.now() > attemptEndsAt(a, attempt).getTime() + TIME_LIMIT_GRACE_MS) {
+      return res.status(400).json({ message: "Time ran out on this quiz, so it can't be submitted now." });
+    }
   }
 
   const doc = {

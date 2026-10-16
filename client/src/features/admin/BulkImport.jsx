@@ -299,7 +299,7 @@ export default function BulkImport({ onImported, onClose }) {
           <p className="text-muted" style={{ marginTop: 0 }}>
             A CSV with <strong>name</strong>, <strong>email</strong> and an optional{" "}
             <strong>role</strong> column (student or teacher — blank means student). Each person
-            gets a password built from their own name, like <code>techdea@Asha47</code> — shown
+            gets a random, easy-to-say password like <code>river-tiger-427</code> — shown
             once here, so download them. Tell people to change it once they're in. Admins are
             added one at a time, above.
           </p>

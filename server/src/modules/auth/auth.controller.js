@@ -4,19 +4,25 @@ const RevokedToken = require("./RevokedToken.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { signToken } = require("../../shared/utils/token");
 const { passwordProblem } = require("../../shared/utils/password");
+const { cleanText, nameProblem, emailProblem } = require("../../shared/utils/validate");
 
 // POST /api/auth/register  — always creates a student
 exports.register = asyncHandler(async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { password } = req.body;
+  const name = cleanText(req.body.name);
+  const email = cleanText(req.body.email).toLowerCase();
+  const phone = cleanText(req.body.phone).slice(0, 30);
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email and password are required" });
   }
+  const invalid = nameProblem(name) || emailProblem(email);
+  if (invalid) return res.status(400).json({ message: invalid });
   const weak = passwordProblem(password, { name, email });
   if (weak) return res.status(400).json({ message: weak });
-  const exists = await User.findOne({ email: String(email).toLowerCase() });
+  const exists = await User.findOne({ email });
   if (exists) return res.status(409).json({ message: "An account with that email already exists" });
 
-  const user = new User({ name, email, phone: phone || "", role: "student" });
+  const user = new User({ name, email, phone, role: "student" });
   await user.setPassword(password);
   await user.save();
 
@@ -58,20 +64,31 @@ exports.me = asyncHandler(async (req, res) => {
 
 // PUT /api/auth/me
 exports.updateMe = asyncHandler(async (req, res) => {
-  const { name, email, phone } = req.body;
-  const nameChanged = name && name.trim() && name.trim() !== req.user.name;
+  // Only fields that were sent are touched; a blank or non-text value is
+  // treated as "not sent" for name and email, never as a crash.
+  const name = cleanText(req.body.name);
+  const email = cleanText(req.body.email).toLowerCase();
+  if (name) {
+    const bad = nameProblem(name);
+    if (bad) return res.status(400).json({ message: bad });
+  }
+  if (email) {
+    const bad = emailProblem(email);
+    if (bad) return res.status(400).json({ message: bad });
+  }
+  const nameChanged = !!name && name !== req.user.name;
 
   // Editable here again. It was locked down while email was the account recovery
   // channel — a stolen token could have repointed every future code at an
   // attacker. With no email anywhere, recovery is an admin setting a password,
   // so the address is an ordinary profile field once more.
-  if (email && email.toLowerCase() !== req.user.email) {
-    const taken = await User.findOne({ email: email.toLowerCase() });
+  if (email && email !== req.user.email) {
+    const taken = await User.findOne({ email });
     if (taken) return res.status(409).json({ message: "That email is already in use" });
-    req.user.email = email.toLowerCase();
+    req.user.email = email;
   }
-  if (name && name.trim()) req.user.name = name.trim();
-  if (phone !== undefined) req.user.phone = phone;
+  if (name) req.user.name = name;
+  if (req.body.phone !== undefined) req.user.phone = cleanText(req.body.phone).slice(0, 30);
   await req.user.save();
 
   // the teacher name shown on a course follows the owner's account name

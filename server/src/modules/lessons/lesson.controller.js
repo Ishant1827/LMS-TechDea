@@ -1,5 +1,7 @@
 const Course = require("../courses/Course.model");
 const Lesson = require("./Lesson.model");
+const Enrollment = require("../enrollments/Enrollment.model");
+const Doubt = require("../doubts/Doubt.model");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { LESSON_TYPES } = require("../../shared/utils/constants");
 const { isSafeUrl, LINK_ERROR } = require("../../shared/utils/url");
@@ -146,5 +148,22 @@ exports.remove = asyncHandler(async (req, res) => {
 
   const lesson = await Lesson.findOneAndDelete({ _id: req.params.lessonId, course: course._id });
   if (!lesson) return res.status(404).json({ message: "Lesson not found" });
+
+  // Everything that still points at the lesson goes too. A completed id left
+  // behind kept counting toward progress — a student could be "complete" with
+  // lessons still to do, and a teacher's roster could pass 100%.
+  await Promise.all([
+    Enrollment.updateMany(
+      { course: course._id },
+      { $pull: { completedLessons: lesson._id }, $unset: { [`notes.${lesson._id}`]: "" } }
+    ),
+    Enrollment.updateMany(
+      { course: course._id, lastLessonId: lesson._id },
+      { $set: { lastLessonId: null } }
+    ),
+    // The doubt stays — it is the student's question — but no longer names a
+    // lesson that is gone.
+    Doubt.updateMany({ lesson: lesson._id }, { $set: { lesson: null } }),
+  ]);
   res.json({ message: "Lesson deleted" });
 });

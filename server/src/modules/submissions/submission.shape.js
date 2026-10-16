@@ -31,4 +31,4 @@ function shapeSubmission(sub, a) {
   };
 }
 
-module.exports = { shapeSubmission };
+module.exports = { shapeSubmission, percentOf };

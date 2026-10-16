@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Course = require("../courses/Course.model");
 const Lesson = require("../lessons/Lesson.model");
 const Enrollment = require("./Enrollment.model");
@@ -40,9 +41,13 @@ const courseLessons = (courseId) =>
     .sort({ order: 1, createdAt: 1 })
     .lean();
 
-// Recompute status/completedAt on an enrollment doc from its completed count.
-function syncCompletion(enrollment, total) {
-  const isComplete = total > 0 && enrollment.completedLessons.length >= total;
+// Recompute status/completedAt on an enrollment doc from the lessons a student
+// can see now. Counting `completedLessons` alone was wrong: it still holds ids
+// of lessons since hidden or deleted, so a student could be "complete" with
+// visible lessons left to do.
+function syncCompletion(enrollment, lessons) {
+  const done = new Set(enrollment.completedLessons.map(String));
+  const isComplete = lessons.length > 0 && lessons.every((l) => done.has(String(l._id)));
   if (isComplete && enrollment.status !== "completed") {
     enrollment.status = "completed";
     enrollment.completedAt = new Date();
@@ -99,11 +104,14 @@ exports.mine = asyncHandler(async (req, res) => {
       const cl = byCourse[String(e.course._id)] || [];
       const p = progressFor(cl, e.completedLessons, e.lastLessonId);
       const cur = cl.find((l) => String(l._id) === String(p.currentLessonId));
+      // From live progress, not the stored field: that is only rewritten when
+      // a lesson is ticked, so a lesson added later left it saying "completed".
+      const complete = p.total > 0 && p.completed >= p.total;
       return {
         _id: e._id,
         course: e.course,
-        status: e.status,
-        completedAt: e.completedAt,
+        status: complete ? "completed" : "active",
+        completedAt: complete ? e.completedAt : null,
         updatedAt: e.updatedAt,
         ...p,
         remaining: Math.max(0, p.total - p.completed),
@@ -139,6 +147,13 @@ exports.saveNote = asyncHandler(async (req, res) => {
   });
   if (!enrollment) return res.status(404).json({ message: "You are not enrolled in this course" });
 
+  // Only for a lesson that is in this course. Any other key used to be stored
+  // as given, so the notes map could fill with junk (or a key Mongo rejects).
+  const lessonOk =
+    mongoose.isValidObjectId(req.params.lessonId) &&
+    (await Lesson.exists({ _id: req.params.lessonId, course: enrollment.course }));
+  if (!lessonOk) return res.status(404).json({ message: "Lesson not found" });
+
   const text = String(req.body.text || "").slice(0, 8000);
   if (text.trim()) enrollment.notes.set(req.params.lessonId, text);
   else enrollment.notes.delete(req.params.lessonId);
@@ -170,7 +185,13 @@ exports.completeLesson = asyncHandler(async (req, res) => {
   });
   if (!enrollment) return res.status(404).json({ message: "You are not enrolled in this course" });
 
-  const lesson = await Lesson.findOne({ _id: req.body.lessonId, course: req.params.courseId });
+  // Drafts are hidden from students, so they can't be completed either — a
+  // draft id in the list would count once the lesson is published.
+  const lesson = await Lesson.findOne({
+    _id: req.body.lessonId,
+    course: req.params.courseId,
+    published: { $ne: false },
+  });
   if (!lesson) return res.status(404).json({ message: "Lesson not found" });
 
   if (!enrollment.completedLessons.some((id) => String(id) === String(lesson._id))) {
@@ -179,7 +200,7 @@ exports.completeLesson = asyncHandler(async (req, res) => {
   enrollment.lastLessonId = lesson._id;
 
   const all = await courseLessons(req.params.courseId);
-  const justCompleted = syncCompletion(enrollment, all.length);
+  const justCompleted = syncCompletion(enrollment, all);
   await enrollment.save();
 
   res.json({

@@ -14,14 +14,18 @@ exports.roster = asyncHandler(async (req, res) => {
   const courseIds = courses.map((c) => c._id);
   const titleById = Object.fromEntries(courses.map((c) => [String(c._id), c.title]));
 
-  const [enrolls, lessonCounts] = await Promise.all([
+  const [enrolls, visibleLessons] = await Promise.all([
     Enrollment.find({ course: { $in: courseIds } }).populate("student", "name email").lean(),
     Lesson.aggregate([
       { $match: { course: { $in: courseIds }, published: { $ne: false } } },
-      { $group: { _id: "$course", n: { $sum: 1 } } },
+      { $group: { _id: "$course", ids: { $push: "$_id" } } },
     ]),
   ]);
-  const totalById = Object.fromEntries(lessonCounts.map((x) => [String(x._id), x.n]));
+  // Visible lesson ids per course. Only completions of these count — the raw
+  // completed list can hold lessons since hidden or deleted.
+  const visibleById = Object.fromEntries(
+    visibleLessons.map((x) => [String(x._id), new Set(x.ids.map(String))])
+  );
 
   const byStudent = new Map();
   for (const e of enrolls) {
@@ -30,8 +34,9 @@ exports.roster = asyncHandler(async (req, res) => {
     if (!byStudent.has(sid)) {
       byStudent.set(sid, { student: e.student, courses: [], lastActive: null });
     }
-    const total = totalById[String(e.course)] || 0;
-    const completed = Math.min((e.completedLessons || []).length, total);
+    const visible = visibleById[String(e.course)] || new Set();
+    const total = visible.size;
+    const completed = (e.completedLessons || []).filter((id) => visible.has(String(id))).length;
     const percent = total ? Math.round((completed / total) * 100) : 0;
     const rec = byStudent.get(sid);
     rec.courses.push({
@@ -40,7 +45,8 @@ exports.roster = asyncHandler(async (req, res) => {
       percent,
       completed,
       total,
-      status: e.status,
+      // live, not the stored field — that goes stale when lessons are added
+      status: total > 0 && completed >= total ? "completed" : "active",
       lastActive: e.updatedAt,
     });
     if (!rec.lastActive || e.updatedAt > rec.lastActive) rec.lastActive = e.updatedAt;

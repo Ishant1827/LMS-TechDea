@@ -283,6 +283,12 @@ function GradeRow({ a, sub, onGraded }) {
   const [showAnswers, setShowAnswers] = useState(false);
 
   const save = async () => {
+    // A grade needs a mark. Without one the server keeps only the note, so say
+    // so here rather than showing "Grade saved" for something that isn't.
+    if (score === "" && sub.status !== "graded") {
+      toast(`Enter marks out of ${max} first`, "error");
+      return;
+    }
     setBusy(true);
     try {
       const { data } = await api.patch(`/submissions/${sub._id}/grade`, {

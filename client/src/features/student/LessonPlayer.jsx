@@ -19,6 +19,7 @@ import Brand from "@/shared/components/layout/Brand";
 import LessonContent from "@/shared/components/lesson/LessonContent";
 import Modal from "@/shared/components/ui/Modal";
 import { useToast } from "@/shared/context/ToastContext";
+import { useAuth, LOCAL_NOTE_PREFIX } from "@/features/auth/AuthContext";
 import { typeMeta, fmtDuration } from "@/shared/lib/lessonTypes";
 
 function Centered({ children }) {
@@ -35,6 +36,7 @@ export default function LessonPlayer() {
   const { courseId, lessonId } = useParams();
   const nav = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   // { course, lessons, doneSet } — populated by the load below
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -52,7 +54,9 @@ export default function LessonPlayer() {
   const [noteDraft, setNoteDraft] = useState("");
   const [noteState, setNoteState] = useState(""); // "", "Unsaved", "Saving…", "Saved"
 
-  const noteKey = (lid) => `lms:note:${courseId}:${lid}`;
+  // Keyed by who is signed in, so on a shared computer one student's unsaved
+  // draft is never offered to (and saved into) the next student's account.
+  const noteKey = (lid) => `${LOCAL_NOTE_PREFIX}${user?._id}:${courseId}:${lid}`;
   const readLocalNote = (lid) => {
     try {
       return localStorage.getItem(noteKey(lid));

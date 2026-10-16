@@ -6,25 +6,15 @@ const Review = require("../reviews/Review.model");
 const Doubt = require("../doubts/Doubt.model");
 const Assessment = require("../assessments/Assessment.model");
 const Submission = require("../submissions/Submission.model");
+const QuizAttempt = require("../assessments/QuizAttempt.model");
 const User = require("../users/User.model");
 const { canManage } = require("../../shared/utils/access");
 const asyncHandler = require("../../shared/utils/asyncHandler");
 const { DIFFICULTY } = require("../../shared/utils/constants");
 const { isSafeImageUrl } = require("../../shared/utils/url");
+const { percentOf } = require("../submissions/submission.shape");
 
 const rx = (s) => new RegExp(String(s).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-
-// One 0..100 figure for a submission, whatever kind it is — the same rule the
-// assessments module uses. A quiz score is already a percentage; an assignment
-// score is out of the assessment's `points`. `null` means "not scored yet", and
-// the caller must leave those out of an average rather than counting them as 0.
-function scorePercent(sub, assessment) {
-  const raw = sub.score != null ? sub.score : sub.autoScore;
-  if (raw == null) return null;
-  if (assessment.kind === "quiz") return Math.round(raw);
-  const max = assessment.points || 100;
-  return max ? Math.round((raw / max) * 100) : 0;
-}
 
 // Build an ordered [{ name, lessons, minutes }] summary from a course's lesson list.
 function moduleSummary(lessons) {
@@ -40,6 +30,12 @@ function moduleSummary(lessons) {
   }
   return order.map((name) => ({ name, lessons: acc[name].count, minutes: acc[name].minutes }));
 }
+
+// How many of a student's completed lessons the course still shows. The raw
+// list keeps ids of lessons since hidden (and, before deletes cleaned up after
+// themselves, deleted), so its length alone could pass 100%.
+const countVisibleDone = (completedIds, visibleIds) =>
+  (completedIds || []).filter((id) => visibleIds.has(String(id))).length;
 
 const totalMinutes = (lessons) => lessons.reduce((s, l) => s + (Number(l.durationMin) || 0), 0);
 
@@ -67,7 +63,9 @@ exports.listPublished = asyncHandler(async (req, res) => {
   // separate countDocuments was one more round trip for a number we already
   // had. The category list doesn't depend on the set, so it rides along.
   let [courses, allCategories] = await Promise.all([
-    Course.find(filter).sort(mongoSort).lean(),
+    // Covers are inline images and can be large; the whole set is read here,
+    // so leave them out and fetch only the page's below.
+    Course.find(filter).sort(mongoSort).select("-thumbnailUrl").lean(),
     Course.distinct("category", { published: true, category: { $ne: "" } }),
   ]);
   const total = courses.length;
@@ -103,8 +101,13 @@ exports.listPublished = asyncHandler(async (req, res) => {
   if (req.query.sort === "rating") courses.sort((a, b) => b.rating - a.rating);
 
   const start = (page - 1) * limit;
+  const pageCourses = courses.slice(start, start + limit);
+  const covers = await Course.find({ _id: { $in: pageCourses.map((c) => c._id) } })
+    .select("thumbnailUrl")
+    .lean();
+  const coverById = new Map(covers.map((c) => [String(c._id), c.thumbnailUrl || ""]));
   res.json({
-    courses: courses.slice(start, start + limit),
+    courses: pageCourses.map((c) => ({ ...c, thumbnailUrl: coverById.get(String(c._id)) || "" })),
     total,
     page,
     pages: Math.max(1, Math.ceil(total / limit)),
@@ -163,6 +166,9 @@ exports.getOne = asyncHandler(async (req, res) => {
   if (!course.published && !isManager) return res.status(404).json({ message: "Course not found" });
 
   const lessons = isManager ? allLessons : allLessons.filter((l) => l.published !== false);
+  // This page is public. The owner's email is for the people managing the
+  // course, not for every visitor — students see the name only.
+  if (!isManager && course.owner) course.owner = { _id: course.owner._id, name: course.owner.name };
 
   res.json({
     course: {
@@ -283,6 +289,7 @@ exports.remove = asyncHandler(async (req, res) => {
     Enrollment.deleteMany({ course: course._id }),
     Assessment.deleteMany({ course: course._id }),
     Submission.deleteMany({ course: course._id }),
+    QuizAttempt.deleteMany({ course: course._id }),
     Doubt.deleteMany({ course: course._id }),
     Review.deleteMany({ course: course._id }),
     course.deleteOne(),
@@ -296,25 +303,32 @@ exports.courseEnrollments = asyncHandler(async (req, res) => {
   if (!course) return res.status(404).json({ message: "Course not found" });
   if (!canManage(req.user, course)) return res.status(403).json({ message: "Not your course" });
 
-  const total = await Lesson.countDocuments({ course: course._id, published: { $ne: false } });
-  const enrolls = await Enrollment.find({ course: course._id })
-    .populate("student", "name email")
-    .sort({ createdAt: -1 })
-    .lean();
+  const [visible, enrolls] = await Promise.all([
+    Lesson.find({ course: course._id, published: { $ne: false } }).distinct("_id"),
+    Enrollment.find({ course: course._id })
+      .populate("student", "name email")
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
+  const visibleIds = new Set(visible.map(String));
+  const total = visibleIds.size;
 
   res.json({
     course: { _id: course._id, title: course.title },
     total,
     enrollments: enrolls
       .filter((e) => e.student)
-      .map((e) => ({
-        _id: e._id,
-        student: e.student,
-        completed: e.completedLessons.length,
-        total,
-        percent: total ? Math.round((e.completedLessons.length / total) * 100) : 0,
-        enrolledAt: e.createdAt,
-      })),
+      .map((e) => {
+        const completed = countVisibleDone(e.completedLessons, visibleIds);
+        return {
+          _id: e._id,
+          student: e.student,
+          completed,
+          total,
+          percent: total ? Math.round((completed / total) * 100) : 0,
+          enrolledAt: e.createdAt,
+        };
+      }),
   });
 });
 
@@ -330,7 +344,7 @@ exports.performance = asyncHandler(async (req, res) => {
       .select("title module")
       .lean(),
     Enrollment.find({ course: course._id })
-      .select("completedLessons status updatedAt")
+      .select("completedLessons updatedAt")
       .lean(),
     Assessment.find({ course: course._id })
       .sort({ createdAt: -1 })
@@ -343,13 +357,16 @@ exports.performance = asyncHandler(async (req, res) => {
 
   const enrolled = enrolls.length;
   const totalLessons = lessons.length;
-  const completedCourse = enrolls.filter((e) => e.status === "completed").length;
-
+  const visibleIds = new Set(lessons.map((l) => String(l._id)));
+  // Live, not the stored status — that goes stale when lessons are added.
+  const completedCourse = totalLessons
+    ? enrolls.filter((e) => countVisibleDone(e.completedLessons, visibleIds) >= totalLessons).length
+    : 0;
   const avgPercent =
     enrolled && totalLessons
       ? Math.round(
           (enrolls.reduce(
-            (s, e) => s + Math.min((e.completedLessons || []).length, totalLessons) / totalLessons,
+            (s, e) => s + countVisibleDone(e.completedLessons, visibleIds) / totalLessons,
             0
           ) /
             enrolled) *
@@ -377,7 +394,9 @@ exports.performance = asyncHandler(async (req, res) => {
     totalLessons,
     assessments: assessments.map((a) => {
       const subs = subsByAssessment.get(String(a._id)) || [];
-      const scored = subs.map((s) => scorePercent(s, a)).filter((p) => p != null);
+      // The one shared rule (submission.shape) — `null` is "not scored yet" and
+      // stays out of the average rather than counting as 0.
+      const scored = subs.map((s) => percentOf(s, a)).filter((p) => p != null);
       const avg = scored.length
         ? Math.round(scored.reduce((s, p) => s + p, 0) / scored.length)
         : null;

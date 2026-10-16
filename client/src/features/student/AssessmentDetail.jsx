@@ -70,8 +70,19 @@ function ResultBanner({ a, sub }) {
 }
 
 /* ── read-only quiz review (answers vs key) ──────────────────────────────── */
-function QuizReview({ questions, answers }) {
+// `showKey` is false until the server releases the answer key (after the due
+// date). Until then only the student's own picks are marked, neither right
+// nor wrong — the score in the banner already says how they did.
+function QuizReview({ questions, answers, showKey, dueAt }) {
   return (
+    <>
+    {!showKey && (
+      <p className="muted-sm">
+        {dueAt
+          ? `Correct answers will be shown after ${fmtDateTime(dueAt)}.`
+          : "Correct answers aren't shown for this quiz."}
+      </p>
+    )}
     <ol className="qz-qs">
       {questions.map((q, i) => (
         <li key={q._id || i} className="qz-q">
@@ -82,7 +93,16 @@ function QuizReview({ questions, answers }) {
           <div className="qz-opts">
             {q.options.map((opt, oi) => {
               const picked = answers[i] === oi;
-              const correct = q.correctIndex === oi;
+              const correct = showKey && q.correctIndex === oi;
+              if (!showKey) {
+                return (
+                  <div key={oi} className={"qz-opt is-static" + (picked ? " is-chosen" : "")}>
+                    <span className="mark" />
+                    {opt}
+                    {picked && <span className="tag-you">Your answer</span>}
+                  </div>
+                );
+              }
               return (
                 <div
                   key={oi}
@@ -108,31 +128,55 @@ function QuizReview({ questions, answers }) {
         </li>
       ))}
     </ol>
+    </>
   );
 }
 
 /* ── take / submit ─────────────────────────────────────────────────────── */
-function AttemptForm({ a, onDone, previous }) {
+// Seconds left on a timed attempt. `endsAt` comes from the server (already cut
+// short by the due date) and `offsetMs` is how far the server's clock is ahead
+// of this device's, so a wrong phone clock can't add or take away time.
+const secondsLeft = (endsAt, offsetMs) =>
+  Math.max(0, Math.ceil((new Date(endsAt).getTime() - (Date.now() + offsetMs)) / 1000));
+
+// Picked answers are kept for this tab, so a refresh mid-quiz doesn't wipe
+// them now that it no longer resets the clock either.
+const answersKey = (id) => `quiz-answers:${id}`;
+const readSavedAnswers = (id, count) => {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(answersKey(id)) || "null");
+    if (Array.isArray(saved) && saved.length === count) return saved;
+  } catch {
+    /* storage blocked or garbled — start blank */
+  }
+  return null;
+};
+
+function AttemptForm({ a, onDone, previous, attempt, offsetMs }) {
   const toast = useToast();
   const confirm = useConfirm();
   // A returned assignment comes back with what they wrote last time, so fixing
   // one broken link doesn't mean typing the whole answer again.
   const [text, setText] = useState(previous?.text || "");
   const [link, setLink] = useState(previous?.link || "");
-  const [answers, setAnswers] = useState(() => (a.questions || []).map(() => -1));
+  const [answers, setAnswers] = useState(
+    () => readSavedAnswers(a._id, (a.questions || []).length) || (a.questions || []).map(() => -1)
+  );
   const [busy, setBusy] = useState(false);
-  // The countdown can never outlive the due date. A 30-minute quiz opened five
-  // minutes before it closes gets five minutes, and auto-submits while the work
-  // is still accepted — rather than running its full half hour and being
-  // refused at the end with everything typed into it.
-  const [left, setLeft] = useState(() => {
-    if (a.kind !== "quiz" || !a.timeLimitMin) return 0;
-    const limit = a.timeLimitMin * 60;
-    if (!a.dueAt) return limit;
-    const toDue = Math.floor((new Date(a.dueAt).getTime() - Date.now()) / 1000);
-    return Math.max(1, Math.min(limit, toDue));
-  });
+  // Counts down to the end the server set when the quiz was started, so a
+  // refresh carries on where it was instead of starting again.
+  const timed = a.kind === "quiz" && !!attempt;
+  const [left, setLeft] = useState(() => (timed ? secondsLeft(attempt.endsAt, offsetMs) : 0));
   const submittedRef = useRef(false);
+
+  useEffect(() => {
+    if (a.kind !== "quiz") return;
+    try {
+      sessionStorage.setItem(answersKey(a._id), JSON.stringify(answers));
+    } catch {
+      /* storage blocked — a refresh just loses the picks */
+    }
+  }, [a._id, a.kind, answers]);
 
   const total = (a.questions || []).length;
   const answered = answers.filter((v) => v >= 0).length;
@@ -159,6 +203,11 @@ function AttemptForm({ a, onDone, previous }) {
     try {
       const body = a.kind === "assignment" ? { text, link } : { answers };
       const { data } = await api.post(`/assessments/${a._id}/submit`, body);
+      try {
+        sessionStorage.removeItem(answersKey(a._id));
+      } catch {
+        /* nothing to clean */
+      }
       toast(auto ? "Time's up — quiz submitted" : a.kind === "quiz" ? "Quiz submitted" : "Assignment submitted");
       onDone(data.submission);
     } catch (e) {
@@ -168,28 +217,34 @@ function AttemptForm({ a, onDone, previous }) {
     }
   };
 
+  // The interval only counts down. Submitting happens in the effect below,
+  // which runs after a render and so sees the answers as they are now. Calling
+  // `send` from inside the interval used the copy from the first render, whose
+  // answers were all still blank — a timed-out quiz scored 0.
+  // Re-reading the clock each tick (rather than subtracting one) keeps it
+  // right when a phone throttles timers in a background tab.
   useEffect(() => {
-    if (a.kind !== "quiz" || !a.timeLimitMin) return;
+    if (!timed) return;
     const id = setInterval(() => {
-      setLeft((s) => {
-        if (s <= 1) {
-          clearInterval(id);
-          send(true);
-          return 0;
-        }
-        return s - 1;
-      });
+      const s = secondsLeft(attempt.endsAt, offsetMs);
+      setLeft(s);
+      if (s <= 0) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (timed && left === 0) send(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [left]);
 
   const mm = String(Math.floor(left / 60)).padStart(2, "0");
   const ss = String(left % 60).padStart(2, "0");
 
   return (
     <>
-      {a.kind === "quiz" && a.timeLimitMin > 0 && (
+      {timed && (
         <div className={"qz-timerbar" + (left <= 30 ? " is-low" : "")}>
           <span className="qz-timer">
             <Clock /> {mm}:{ss}
@@ -293,16 +348,80 @@ function ClosedNotice({ a }) {
   );
 }
 
+/* ── a timed quiz, before the clock starts ──────────────────────────────── */
+// The questions stay hidden until this button is pressed, because pressing it
+// is what starts the server's clock.
+function StartQuiz({ a, onStarted }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const start = async () => {
+    setBusy(true);
+    try {
+      await api.post(`/assessments/${a._id}/start`);
+      onStarted();
+    } catch (e) {
+      toast(e.message, "error");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {a.instructions && <p className="prompt-body">{a.instructions}</p>}
+      <div className="result-banner is-pending">
+        <Clock />
+        <div>
+          <div className="rb-label">You'll have {a.timeLimitMin} min once you start</div>
+          <div style={{ fontSize: 13 }}>
+            The timer keeps running if you leave or refresh the page, and the quiz is
+            submitted for you when time is up.
+          </div>
+        </div>
+      </div>
+      <div className="asmt-submitbar">
+        <button className={"btn btn-primary" + (busy ? " is-loading" : "")} disabled={busy} onClick={start}>
+          Start quiz
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ── a timed quiz whose time ran out with nothing handed in ─────────────── */
+function TimeUpNotice({ a }) {
+  return (
+    <>
+      {a.instructions && <p className="prompt-body">{a.instructions}</p>}
+      <div className="result-banner is-fail">
+        <Lock />
+        <div>
+          <div className="rb-label">Time ran out on this quiz</div>
+          <div style={{ fontSize: 13 }}>
+            It wasn't submitted in time. Ask your teacher if you need another chance.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── page ──────────────────────────────────────────────────────────────── */
 export default function AssessmentDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  // { a, sub }
+  // { a, sub, needsStart, attempt, offsetMs }
   const { status, data, error, reload } = useLoad(
     () =>
-      api
-        .get(`/assessments/${id}`)
-        .then((r) => ({ a: r.data.assessment, sub: r.data.submission })),
+      api.get(`/assessments/${id}`).then((r) => ({
+        a: r.data.assessment,
+        sub: r.data.submission,
+        answersShown: !!r.data.answersShown,
+        needsStart: !!r.data.needsStart,
+        attempt: r.data.attempt,
+        // how far the server's clock is ahead of this device's
+        offsetMs: r.data.serverNow ? new Date(r.data.serverNow).getTime() - Date.now() : 0,
+      })),
     [id]
   );
 
@@ -335,11 +454,16 @@ export default function AssessmentDetail() {
       </Layout>
     );
 
-  const { a, sub } = data;
+  const { a, sub, answersShown, needsStart, attempt, offsetMs } = data;
   const { label } = kindMeta(a.kind);
   // Closed only when nothing was handed in. Work the teacher sent back stays
   // open past the due date: reopening it was their choice, not the student's.
   const closed = !sub && isOverdue(a.dueAt);
+  // Started, never submitted, and past the time the server will still take it.
+  const timeUp =
+    !sub &&
+    !!attempt &&
+    Date.now() + offsetMs > new Date(attempt.endsAt).getTime() + (attempt.graceMs || 0);
 
   return (
     <Layout>
@@ -381,14 +505,18 @@ export default function AssessmentDetail() {
 
       <ResultBanner a={a} sub={sub} />
 
-      {closed ? (
+      {timeUp ? (
+        <TimeUpNotice a={a} />
+      ) : closed && !attempt ? (
         <ClosedNotice a={a} />
+      ) : needsStart ? (
+        <StartQuiz a={a} onStarted={reload} />
       ) : !sub || sub.status === "returned" ? (
-        <AttemptForm a={a} onDone={finish} previous={sub} />
+        <AttemptForm a={a} onDone={finish} previous={sub} attempt={attempt} offsetMs={offsetMs} />
       ) : a.kind === "quiz" ? (
         <>
           {a.instructions && <p className="prompt-body">{a.instructions}</p>}
-          {a.questions?.length ? <QuizReview questions={a.questions} answers={sub.answers || []} /> : null}
+          {a.questions?.length ? <QuizReview questions={a.questions} answers={sub.answers || []} showKey={answersShown} dueAt={a.dueAt} /> : null}
           {sub.feedback && (
             <div className="fb-box">
               <div className="fb-label">Teacher feedback</div>

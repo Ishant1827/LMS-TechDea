@@ -5,6 +5,13 @@ const { logFatal } = require("./shared/utils/logger");
 const app = require("./app");
 
 const PORT = process.env.PORT || 5000;
+
+// Without a secret every sign-in fails with a 500 and every token is refused.
+// Better to stop here and say why than to start a server that cannot work.
+if (!process.env.JWT_SECRET) {
+  console.error("JWT_SECRET is not set (see server/.env.example) — refusing to start.");
+  process.exit(1);
+}
 const SHUTDOWN_GRACE_MS = 10_000;
 
 connectDB()

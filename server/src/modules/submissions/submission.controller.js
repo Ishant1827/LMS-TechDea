@@ -102,13 +102,11 @@ exports.grade = asyncHandler(async (req, res) => {
     sub.gradedBy = req.user._id;
     sub.gradedAt = new Date();
   }
+  // Feedback on its own is a note, not a grade. It used to mark the work
+  // "graded" too, so saving with the score box empty took the submission out
+  // of the pending queue and told the student it was graded — with no mark.
   if (req.body.feedback !== undefined) {
     sub.feedback = String(req.body.feedback).slice(0, 8000);
-    if (sub.status !== "graded") {
-      sub.status = "graded";
-      sub.gradedBy = req.user._id;
-      sub.gradedAt = new Date();
-    }
   }
   await sub.save();
 
